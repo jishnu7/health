@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.home.HomeScreen
+import xyz.jishnu.health.ui.screens.settings.PlanPickerScreen
+import xyz.jishnu.health.ui.screens.settings.SettingsScreen
 import xyz.jishnu.health.ui.screens.stages.StagesScreen
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.FastingViewModel
@@ -23,6 +25,7 @@ object Routes {
     const val Progress = "progress"
     const val Settings = "settings"
     const val Stages = "stages"
+    const val PlanPicker = "plan-picker"
 }
 
 @Composable
@@ -50,7 +53,15 @@ fun IntermNavHost(
         }
         composable(Routes.Weight) { PlaceholderScreen("Weight") }
         composable(Routes.Progress) { PlaceholderScreen("Progress") }
-        composable(Routes.Settings) { PlaceholderScreen("Settings") }
+        composable(Routes.Settings) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenPlanPicker = { navController.navigate(Routes.PlanPicker) },
+            )
+        }
+        composable(Routes.PlanPicker) {
+            PlanPickerScreen(onBack = { navController.popBackStack() })
+        }
     }
 }
 
