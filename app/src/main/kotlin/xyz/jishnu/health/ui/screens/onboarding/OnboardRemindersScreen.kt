@@ -1,8 +1,6 @@
 package xyz.jishnu.health.ui.screens.onboarding
 
 import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,8 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +48,7 @@ import xyz.jishnu.health.ui.components.IntermToggle
 import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.StepDots3
 import xyz.jishnu.health.ui.components.TimePickerDialog
+import xyz.jishnu.health.ui.components.rememberNotificationPermissionGranted
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.SettingsViewModel
 
@@ -69,18 +66,16 @@ fun OnboardRemindersScreen(
     var showFastStart by remember { mutableStateOf(false) }
     var showReminder by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
+    val notifGranted by rememberNotificationPermissionGranted()
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* result ignored — toggle state already reflects the user's intent */ }
+    ) { /* lifecycle resume re-checks granted state */ }
+    val requestNotifPermission: () -> Unit = {
+        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val granted = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-            if (!granted) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        if (!notifGranted) requestNotifPermission()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
@@ -143,14 +138,18 @@ fun OnboardRemindersScreen(
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    "When a fast is about to start or end",
+                                    if (notifGranted) "When a fast is about to start or end"
+                                    else "Tap to grant notification permission",
                                     style = IntermTheme.typography.caption,
                                     color = c.muted,
                                 )
                             }
                             IntermToggle(
-                                checked = state.fastingReminderOn,
-                                onCheckedChange = settingsVm::setFastingReminderOn,
+                                checked = state.fastingReminderOn && notifGranted,
+                                onCheckedChange = { newValue ->
+                                    if (!notifGranted) requestNotifPermission()
+                                    else settingsVm.setFastingReminderOn(newValue)
+                                },
                             )
                         }
                     }

@@ -1,5 +1,8 @@
 package xyz.jishnu.health.ui.screens.settings
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +41,7 @@ import xyz.jishnu.health.ui.components.NavRow
 import xyz.jishnu.health.ui.components.SegmentedOption
 import xyz.jishnu.health.ui.components.TimeRow
 import xyz.jishnu.health.ui.components.ToggleRow
+import xyz.jishnu.health.ui.components.rememberNotificationPermissionGranted
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.SettingsViewModel
 
@@ -51,6 +55,14 @@ fun SettingsScreen(
     val c = IntermTheme.colors
     val plan = Plans.byId(state.planId)
     val fastEnd = TimeMath.addHoursToTime(state.fastStartTime, plan.fastHours.toDouble())
+
+    val notifGranted by rememberNotificationPermissionGranted()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* lifecycle resume re-checks granted state */ }
+    val requestNotifPermission: () -> Unit = {
+        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -81,22 +93,28 @@ fun SettingsScreen(
                     )
                     ToggleRow(
                         label = "Fasting reminders",
-                        sub = "Window start and end",
-                        checked = state.fastingReminderOn,
-                        onCheckedChange = vm::setFastingReminderOn,
+                        sub = if (notifGranted) "Window start and end" else "Tap to grant notification permission",
+                        checked = state.fastingReminderOn && notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else vm.setFastingReminderOn(newValue)
+                        },
                     )
                     TimeRow(
                         label = "Daily fasting start",
                         sub = "Ends at $fastEnd (${plan.label})",
                         value = state.fastStartTime,
                         onValueChange = vm::setFastStartTime,
-                        enabled = state.fastingReminderOn,
+                        enabled = state.fastingReminderOn && notifGranted,
                     )
                     ToggleRow(
                         label = "Sticky notification",
-                        sub = "Show progress while fasting",
-                        checked = state.stickyNotificationOn,
-                        onCheckedChange = vm::setStickyNotificationOn,
+                        sub = if (notifGranted) "Show progress while fasting" else "Tap to grant notification permission",
+                        checked = state.stickyNotificationOn && notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else vm.setStickyNotificationOn(newValue)
+                        },
                         showDivider = false,
                     )
                 }
@@ -106,14 +124,18 @@ fun SettingsScreen(
                     UnitsRow(units = state.units, onUnitsChange = vm::setUnits)
                     ToggleRow(
                         label = "Daily weigh-in reminder",
-                        checked = state.weightReminderOn,
-                        onCheckedChange = vm::setWeightReminderOn,
+                        sub = if (notifGranted) null else "Tap to grant notification permission",
+                        checked = state.weightReminderOn && notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else vm.setWeightReminderOn(newValue)
+                        },
                     )
                     TimeRow(
                         label = "Reminder time",
                         value = state.reminderTime,
                         onValueChange = vm::setReminderTime,
-                        enabled = state.weightReminderOn,
+                        enabled = state.weightReminderOn && notifGranted,
                         showDivider = false,
                     )
                 }
