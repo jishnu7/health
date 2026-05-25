@@ -27,4 +27,10 @@ interface WeightEntryDao {
 
     @Query("SELECT * FROM weight_entries ORDER BY dayKey DESC LIMIT 1")
     fun observeLatest(): Flow<WeightEntryEntity?>
+
+    @Query("SELECT * FROM weight_entries WHERE dayKey = :dayKey LIMIT 1")
+    suspend fun findByDayKey(dayKey: Long): WeightEntryEntity?
+
+    @Query("SELECT * FROM weight_entries ORDER BY dayKey DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<WeightEntryEntity>>
 }

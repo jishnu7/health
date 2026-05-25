@@ -19,7 +19,9 @@ import xyz.jishnu.health.data.local.WeightEntryDao
 import xyz.jishnu.health.data.repo.DataStoreSettingsRepository
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.LocalFastingRepository
+import xyz.jishnu.health.data.repo.LocalWeightRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
+import xyz.jishnu.health.data.repo.WeightRepository
 import javax.inject.Singleton
 
 @Module
@@ -49,4 +51,5 @@ object DataModule {
 abstract class RepoModule {
     @Binds @Singleton abstract fun bindFastingRepository(impl: LocalFastingRepository): FastingRepository
     @Binds @Singleton abstract fun bindSettingsRepository(impl: DataStoreSettingsRepository): SettingsRepository
+    @Binds @Singleton abstract fun bindWeightRepository(impl: LocalWeightRepository): WeightRepository
 }
