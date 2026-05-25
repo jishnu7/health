@@ -30,4 +30,5 @@ class SettingsViewModel @Inject constructor(
     fun setStickyNotificationOn(on: Boolean) = viewModelScope.launch { repo.setStickyNotificationOn(on) }
     fun setFastStartTime(hhmm: String) = viewModelScope.launch { repo.setFastStartTime(hhmm) }
     fun setReminderTime(hhmm: String) = viewModelScope.launch { repo.setReminderTime(hhmm) }
+    fun markOnboarded() = viewModelScope.launch { repo.setOnboarded(true) }
 }

@@ -1,5 +1,12 @@
 package xyz.jishnu.health.ui.screens.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,17 +23,24 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.ui.components.BottomNav
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
@@ -39,9 +54,10 @@ import xyz.jishnu.health.ui.components.StageDots
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.FastingUiState
 import xyz.jishnu.health.vm.FastingViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import xyz.jishnu.health.domain.TimeMath
 import java.time.Instant
+
+private val RingSize = 250.dp
+private val RingStroke = 12.dp
 
 @Composable
 fun HomeScreen(
@@ -52,6 +68,40 @@ fun HomeScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
+
+    val ringProgress = remember { Animatable(0f) }
+    var sweeping by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(state.fastStartMs) {
+        if (state.fastStartMs != null) {
+            sweeping = true
+            ringProgress.snapTo(0f)
+            ringProgress.animateTo(1f, tween(durationMillis = 900, easing = FastOutSlowInEasing))
+            ringProgress.snapTo(0f)
+            sweeping = false
+        }
+    }
+
+    LaunchedEffect(state.progress, sweeping, state.isFasting) {
+        if (!sweeping && state.isFasting) {
+            ringProgress.animateTo(state.progress, tween(durationMillis = 400))
+        } else if (!state.isFasting && !sweeping) {
+            ringProgress.snapTo(0f)
+        }
+    }
+
+    val onEndWithSweep: () -> Unit = {
+        scope.launch {
+            sweeping = true
+            val from = ringProgress.value
+            ringProgress.snapTo(from)
+            ringProgress.animateTo(1f, tween(durationMillis = 900, easing = FastOutSlowInEasing))
+            ringProgress.snapTo(0f)
+            sweeping = false
+            vm.endFast()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -75,9 +125,55 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (state.isFasting) ActiveBody(state, onOpenStages, { vm.endFast() }, { vm.resetFast() })
-                else IdleBody(state, onStart = { vm.startFast() }, onLogWeight = { onNavigateTab(NavTab.Weight) }, onOpenSettings = onOpenSettings)
+                Spacer(Modifier.height(16.dp))
+
+                ChipSlot(state)
+
+                Spacer(Modifier.height(22.dp))
+
+                ProgressRing(
+                    progress = ringProgress.value,
+                    size = RingSize,
+                    stroke = RingStroke,
+                    dashed = sweeping || !state.isFasting,
+                ) {
+                    AnimatedContent(
+                        targetState = state.isFasting,
+                        transitionSpec = { fadeIn(tween(220, delayMillis = 80)) togetherWith fadeOut(tween(160)) },
+                        label = "ring-center",
+                    ) { fasting ->
+                        if (fasting) ActiveRingCenter(state) else IdleRingCenter(state)
+                    }
+                }
+
+                Spacer(Modifier.height(22.dp))
+
+                AnimatedContent(
+                    targetState = state.isFasting,
+                    transitionSpec = {
+                        (fadeIn(tween(durationMillis = 240, delayMillis = 80)) togetherWith
+                            fadeOut(tween(durationMillis = 160)))
+                    },
+                    label = "home-body",
+                ) { fasting ->
+                    if (fasting) {
+                        ActiveBody(
+                            state = state,
+                            onOpenStages = onOpenStages,
+                            onEnd = onEndWithSweep,
+                            onReset = { vm.resetFast() },
+                        )
+                    } else {
+                        IdleBody(
+                            state = state,
+                            onStart = { vm.startFast() },
+                            onLogWeight = { onNavigateTab(NavTab.Weight) },
+                            onOpenSettings = onOpenSettings,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(20.dp))
             }
             BottomNav(
@@ -90,6 +186,60 @@ fun HomeScreen(
 }
 
 @Composable
+private fun ChipSlot(state: FastingUiState) {
+    val c = IntermTheme.colors
+    Box(
+        modifier = Modifier.defaultMinSize(minHeight = 28.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        AnimatedContent(
+            targetState = state.isFasting,
+            transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
+            label = "chip-slot",
+        ) { fasting ->
+            if (fasting) {
+                IntermStageChip(label = "Stage ${state.stageIdx + 1} of ${state.stages.size} · ${state.stage.name}")
+            } else {
+                Text("NOT FASTING", style = IntermTheme.typography.hEyebrow, color = c.muted)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveRingCenter(state: FastingUiState) {
+    val c = IntermTheme.colors
+    val d = TimeMath.fmtDuration(state.elapsedMs)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("ELAPSED", style = IntermTheme.typography.hEyebrow, color = c.muted)
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(d.hh, style = IntermTheme.typography.hDisplay, color = c.ink)
+            Text(":", style = IntermTheme.typography.hDisplay, color = c.muted)
+            Text(d.mm, style = IntermTheme.typography.hDisplay, color = c.ink)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "${d.ss}s · ${(state.progress * 100).toInt()}% of ${state.goalHours}h",
+            style = IntermTheme.typography.caption,
+            color = c.muted,
+        )
+    }
+}
+
+@Composable
+private fun IdleRingCenter(state: FastingUiState) {
+    val c = IntermTheme.colors
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("GOAL", style = IntermTheme.typography.hEyebrow, color = c.muted)
+        Spacer(Modifier.height(6.dp))
+        Text("${state.goalHours}h", style = IntermTheme.typography.hDisplay.copy(fontSize = 48.sp), color = c.ink)
+        Spacer(Modifier.height(6.dp))
+        Text("${state.plan.label} · ${state.plan.subtitle}", style = IntermTheme.typography.caption, color = c.muted)
+    }
+}
+
+@Composable
 private fun ActiveBody(
     state: FastingUiState,
     onOpenStages: () -> Unit,
@@ -97,36 +247,15 @@ private fun ActiveBody(
     onReset: () -> Unit,
 ) {
     val c = IntermTheme.colors
-    val d = TimeMath.fmtDuration(state.elapsedMs)
     val dr = TimeMath.fmtDuration(state.remainingMs)
     val startedAt = state.fastStartMs?.let { Instant.ofEpochMilli(it) }
     val goalAt = state.fastEndMs?.let { Instant.ofEpochMilli(it) }
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        IntermStageChip(label = "Stage ${state.stageIdx + 1} of ${state.stages.size} · ${state.stage.name}")
-
-        ProgressRing(progress = state.progress, size = 250.dp, stroke = 12.dp) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("ELAPSED", style = IntermTheme.typography.hEyebrow, color = c.muted)
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(d.hh, style = IntermTheme.typography.hDisplay, color = c.ink)
-                    Text(":", style = IntermTheme.typography.hDisplay, color = c.muted)
-                    Text(d.mm, style = IntermTheme.typography.hDisplay, color = c.ink)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "${d.ss}s · ${(state.progress * 100).toInt()}% of ${state.goalHours}h",
-                    style = IntermTheme.typography.caption,
-                    color = c.muted,
-                )
-            }
-        }
-
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,11 +281,11 @@ private fun ActiveBody(
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            IntermButton(onClick = onEnd, variant = IntermButtonVariant.Soft, modifier = Modifier.weight(1f), fillWidth = false) {
+            IntermButton(onClick = onEnd, variant = IntermButtonVariant.Soft, modifier = Modifier.weight(1f)) {
                 Icon(IntermIcons.Stop, contentDescription = null)
                 Text("End fast")
             }
-            IntermButton(onClick = onReset, variant = IntermButtonVariant.Danger, modifier = Modifier.weight(1f), fillWidth = false) {
+            IntermButton(onClick = onReset, variant = IntermButtonVariant.Danger, modifier = Modifier.weight(1f)) {
                 Icon(IntermIcons.Food, contentDescription = null)
                 Text("I ate")
             }
@@ -173,31 +302,19 @@ private fun IdleBody(
 ) {
     val c = IntermTheme.colors
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 28.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("NOT FASTING", style = IntermTheme.typography.hEyebrow, color = c.muted)
-            Spacer(Modifier.height(8.dp))
             Text("Ready when you are.", style = IntermTheme.typography.hTitle, color = c.ink)
             Spacer(Modifier.height(10.dp))
             Text(
                 "Start a ${state.plan.label} fast. We'll track your progress through each metabolic phase.",
                 style = IntermTheme.typography.body,
                 color = c.ink2,
-                modifier = Modifier.widthIn(max = 280.dp),
+                modifier = Modifier.widthIn(max = 320.dp),
             )
-        }
-
-        ProgressRing(progress = 0f, size = 240.dp, stroke = 12.dp, dashed = true) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("GOAL", style = IntermTheme.typography.hEyebrow, color = c.muted)
-                Spacer(Modifier.height(6.dp))
-                Text("${state.goalHours}h", style = IntermTheme.typography.hDisplay.copy(fontSize = 48.sp), color = c.ink)
-                Spacer(Modifier.height(6.dp))
-                Text("${state.plan.label} · ${state.plan.subtitle}", style = IntermTheme.typography.caption, color = c.muted)
-            }
         }
 
         IntermButton(onClick = onStart, variant = IntermButtonVariant.Primary, fillWidth = true) {

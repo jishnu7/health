@@ -1,4 +1,4 @@
-package xyz.jishnu.health.ui.screens.settings
+package xyz.jishnu.health.ui.screens.onboarding
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,12 +33,14 @@ import xyz.jishnu.health.ui.components.IntermButtonVariant
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.PlanRadio
+import xyz.jishnu.health.ui.components.StepDots3
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.SettingsViewModel
 
 @Composable
-fun PlanPickerScreen(
+fun OnboardPlanScreen(
     onBack: () -> Unit,
+    onContinue: () -> Unit,
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val state by vm.settings.collectAsStateWithLifecycle()
@@ -48,10 +50,9 @@ fun PlanPickerScreen(
     LaunchedEffect(state.planId) { selected = state.planId }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             IntermTopBar(
-                modifier = Modifier.statusBarsPadding(),
-                title = "Fasting protocol",
+                title = "",
                 leading = {
                     Box(
                         modifier = Modifier.fillMaxSize().clickable(onClick = onBack),
@@ -62,32 +63,40 @@ fun PlanPickerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 28.dp)
+                    .padding(top = 8.dp, bottom = 28.dp),
             ) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Choose how long you want to fast each day. You can change this any time.",
-                    style = IntermTheme.typography.body,
-                    color = c.ink2,
-                )
-                Spacer(Modifier.height(18.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Plans.all.forEach { p ->
-                        PlanRadio(plan = p, selected = selected == p.id, onSelect = { selected = p.id })
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text("STEP 2 OF 3", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Choose a fasting plan.", style = IntermTheme.typography.hTitle, color = c.ink)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "You can change this any time in settings.",
+                        style = IntermTheme.typography.body,
+                        color = c.ink2,
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Plans.all.forEach { p ->
+                            PlanRadio(plan = p, selected = selected == p.id, onSelect = { selected = p.id })
+                        }
                     }
+                    Spacer(Modifier.height(20.dp))
                 }
-                Spacer(Modifier.height(22.dp))
+                StepDots3(currentStep = 2)
+                Spacer(Modifier.height(18.dp))
                 IntermButton(
-                    onClick = { vm.setPlanId(selected); onBack() },
+                    onClick = { vm.setPlanId(selected); onContinue() },
                     variant = IntermButtonVariant.Primary,
                     fillWidth = true,
                 ) {
-                    Icon(IntermIcons.Check, contentDescription = null)
-                    Text("Save")
+                    Text("Continue")
                 }
-                Spacer(Modifier.height(20.dp))
             }
         }
     }

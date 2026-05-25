@@ -55,7 +55,11 @@ fun ProgressRing(
                     useCenter = false,
                     topLeft = topLeft,
                     size = arcSize,
-                    style = Stroke(width = strokePx, cap = StrokeCap.Round),
+                    style = Stroke(
+                        width = strokePx,
+                        cap = if (dashed) StrokeCap.Butt else StrokeCap.Round,
+                        pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(2f, 6f), 0f) else null,
+                    ),
                 )
             }
         }

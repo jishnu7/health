@@ -10,6 +10,9 @@ import androidx.navigation.navArgument
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.daydetail.DayDetailScreen
 import xyz.jishnu.health.ui.screens.home.HomeScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardPlanScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardRemindersScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardWelcomeScreen
 import xyz.jishnu.health.ui.screens.progress.ProgressScreen
 import xyz.jishnu.health.ui.screens.settings.PlanPickerScreen
 import xyz.jishnu.health.ui.screens.settings.SettingsScreen
@@ -25,11 +28,15 @@ object Routes {
     const val Stages = "stages"
     const val PlanPicker = "plan-picker"
     const val DayDetail = "day-detail"
+    const val OnboardWelcome = "onboard-welcome"
+    const val OnboardPlan = "onboard-plan"
+    const val OnboardReminders = "onboard-reminders"
 }
 
 @Composable
 fun IntermNavHost(
     vm: FastingViewModel,
+    startDestination: String = Routes.Home,
     navController: NavHostController = rememberNavController(),
 ) {
     fun navigateTab(tab: NavTab) {
@@ -45,7 +52,30 @@ fun IntermNavHost(
         }
     }
 
-    NavHost(navController = navController, startDestination = Routes.Home) {
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Routes.OnboardWelcome) {
+            OnboardWelcomeScreen(
+                onGetStarted = { navController.navigate(Routes.OnboardPlan) },
+                onSignIn = { navController.navigate(Routes.OnboardPlan) },
+            )
+        }
+        composable(Routes.OnboardPlan) {
+            OnboardPlanScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.OnboardReminders) },
+            )
+        }
+        composable(Routes.OnboardReminders) {
+            OnboardRemindersScreen(
+                onBack = { navController.popBackStack() },
+                onFinish = {
+                    navController.navigate(Routes.Home) {
+                        popUpTo(Routes.OnboardWelcome) { inclusive = true }
+                    }
+                },
+                fastingVm = vm,
+            )
+        }
         composable(Routes.Home) {
             HomeScreen(
                 vm = vm,
