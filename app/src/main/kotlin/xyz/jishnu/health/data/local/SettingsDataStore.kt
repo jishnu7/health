@@ -23,7 +23,7 @@ data class Settings(
     companion object {
         val Default = Settings(
             planId = "16:8",
-            units = Units.Imperial,
+            units = Units.Metric,
             fastingReminderOn = true,
             weightReminderOn = true,
             stickyNotificationOn = true,
@@ -40,7 +40,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
     val settings: Flow<Settings> = dataStore.data.map { p ->
         Settings(
             planId = p[Keys.PlanId] ?: Settings.Default.planId,
-            units = (p[Keys.Units] ?: Settings.Default.units.name).let { runCatching { Units.valueOf(it) }.getOrDefault(Units.Imperial) },
+            units = (p[Keys.Units] ?: Settings.Default.units.name).let { runCatching { Units.valueOf(it) }.getOrDefault(Units.Metric) },
             fastingReminderOn = p[Keys.FastingReminderOn] ?: Settings.Default.fastingReminderOn,
             weightReminderOn = p[Keys.WeightReminderOn] ?: Settings.Default.weightReminderOn,
             stickyNotificationOn = p[Keys.StickyNotificationOn] ?: Settings.Default.stickyNotificationOn,

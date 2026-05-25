@@ -26,7 +26,7 @@ data class ProgressUiState(
     val range: RangeOption = RangeOption.Last14,
     val entries: List<DayEntry> = emptyList(),
     val plan: Plan = Plans.default,
-    val units: Units = Units.Imperial,
+    val units: Units = Units.Metric,
     val avgFastHours: Double = 0.0,
     val totalFastHours: Double = 0.0,
     val weightStartLb: Double? = null,

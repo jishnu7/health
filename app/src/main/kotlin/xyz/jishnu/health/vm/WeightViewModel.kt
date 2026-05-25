@@ -19,7 +19,7 @@ import xyz.jishnu.health.data.repo.WeightRepository
 import javax.inject.Inject
 
 data class WeightUiState(
-    val units: Units = Units.Imperial,
+    val units: Units = Units.Metric,
     val previous: WeightEntryEntity? = null,
     val draftLb: Double? = null,
     val recent: List<WeightEntryEntity> = emptyList(),

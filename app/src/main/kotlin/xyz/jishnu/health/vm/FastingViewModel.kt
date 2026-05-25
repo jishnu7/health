@@ -83,7 +83,7 @@ class FastingViewModel @Inject constructor(
             fastStartMs = null,
             nowMs = System.currentTimeMillis(),
             plan = Plans.default,
-            units = Units.Imperial,
+            units = Units.Metric,
         ),
     )
 

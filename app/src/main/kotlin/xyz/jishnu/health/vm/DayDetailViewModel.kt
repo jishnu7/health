@@ -31,7 +31,7 @@ data class DayDetailUiState(
     val weightLb: Double = 150.0,
     val previousWeightLb: Double? = null,
     val notes: String = "",
-    val units: Units = Units.Imperial,
+    val units: Units = Units.Metric,
     val goalHours: Int = 16,
     val sessionId: Long? = null,
     val weightId: Long? = null,

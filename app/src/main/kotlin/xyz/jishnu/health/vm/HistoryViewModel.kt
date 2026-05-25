@@ -20,7 +20,7 @@ import javax.inject.Inject
 data class HistoryUiState(
     val entries: List<DayEntry> = emptyList(),
     val plan: Plan = Plans.default,
-    val units: Units = Units.Imperial,
+    val units: Units = Units.Metric,
 )
 
 @HiltViewModel
