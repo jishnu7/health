@@ -9,6 +9,7 @@ plugins {
 android {
     namespace = "xyz.jishnu.health"
     compileSdk = 36
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "xyz.jishnu.health"

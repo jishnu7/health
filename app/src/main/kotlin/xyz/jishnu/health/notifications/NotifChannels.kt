@@ -1,5 +1,6 @@
 package xyz.jishnu.health.notifications
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -25,6 +26,7 @@ object NotifChannels {
                 description = "Ongoing notification while you're fasting."
                 setShowBadge(false)
                 setSound(null, null)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             },
         )
         manager.createNotificationChannel(
