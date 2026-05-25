@@ -147,7 +147,7 @@ fun OnboardRemindersScreen(
                     variant = IntermButtonVariant.Primary,
                     fillWidth = true,
                 ) {
-                    Text("Start fasting")
+                    Text("Start Fasting")
                 }
             }
         }

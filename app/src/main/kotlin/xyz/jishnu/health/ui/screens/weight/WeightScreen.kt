@@ -129,7 +129,7 @@ fun WeightScreen(
                     fillWidth = true,
                 ) {
                     Icon(IntermIcons.Check, contentDescription = null)
-                    Text("Save entry")
+                    Text("Save Entry")
                 }
                 Spacer(Modifier.height(20.dp))
             }

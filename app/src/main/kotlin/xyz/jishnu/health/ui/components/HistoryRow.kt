@@ -29,8 +29,10 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import xyz.jishnu.health.data.model.DayEntry
+import xyz.jishnu.health.data.model.FastStatus
 import xyz.jishnu.health.data.model.Plan
 import xyz.jishnu.health.data.model.Units
+import xyz.jishnu.health.data.model.status
 import xyz.jishnu.health.domain.WeightMath
 import xyz.jishnu.health.ui.theme.IntermTheme
 import java.time.format.DateTimeFormatter
@@ -49,7 +51,7 @@ fun HistoryRow(
     val c = IntermTheme.colors
     val hours = entry.fastHours.toInt()
     val mins = ((entry.fastHours - hours) * 60).toInt()
-    val hit = entry.fastHours >= plan.fastHours
+    val status = entry.status(plan.fastHours)
     val weightLabel = entry.weight?.let { w ->
         val fw = WeightMath.fmtWeight(w.weightLb, units)
         "Weight ${fw.value} ${fw.unit}"
@@ -84,13 +86,13 @@ fun HistoryRow(
                         style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
                         color = c.ink,
                     )
-                    GoalChip(hit = hit)
+                    GoalChip(status = status)
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(weightLabel, style = IntermTheme.typography.caption, color = c.muted)
             }
             Column(modifier = Modifier.width(70.dp), horizontalAlignment = Alignment.End) {
-                HistoryBar(hours = entry.fastHours, goalH = plan.fastHours, hit = hit)
+                HistoryBar(hours = entry.fastHours, goalH = plan.fastHours, status = status)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "goal ${plan.fastHours}h",
@@ -105,10 +107,13 @@ fun HistoryRow(
 }
 
 @Composable
-fun GoalChip(hit: Boolean, modifier: Modifier = Modifier) {
+fun GoalChip(status: FastStatus, modifier: Modifier = Modifier) {
     val c = IntermTheme.colors
-    val bg = if (hit) c.primarySoft else c.accentSoft
-    val fg = if (hit) c.primary else c.accent
+    val (label, bg, fg) = when (status) {
+        FastStatus.Goal -> Triple("GOAL", c.primarySoft, c.primary)
+        FastStatus.Short -> Triple("SHORT", c.accentSoft, c.accent)
+        FastStatus.Ongoing -> Triple("ONGOING", c.border2, c.ink2)
+    }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
@@ -116,7 +121,7 @@ fun GoalChip(hit: Boolean, modifier: Modifier = Modifier) {
             .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(
-            if (hit) "GOAL" else "SHORT",
+            label,
             style = IntermTheme.typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.W600, letterSpacing = em(0.06)),
             color = fg,
         )
@@ -124,11 +129,15 @@ fun GoalChip(hit: Boolean, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun HistoryBar(hours: Double, goalH: Int, hit: Boolean, modifier: Modifier = Modifier) {
+fun HistoryBar(hours: Double, goalH: Int, status: FastStatus, modifier: Modifier = Modifier) {
     val c = IntermTheme.colors
     val fillRatio = min(1.0, hours / 24.0).toFloat()
     val goalRatio = (goalH / 24f).coerceIn(0f, 1f)
-    val fg = if (hit) c.primary else c.accent
+    val fg = when (status) {
+        FastStatus.Goal -> c.primary
+        FastStatus.Short -> c.accent
+        FastStatus.Ongoing -> c.ink2
+    }
     Canvas(modifier = modifier.size(width = 64.dp, height = 12.dp)) {
         val w = size.width
         val barTop = 3f

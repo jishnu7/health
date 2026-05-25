@@ -169,8 +169,6 @@ fun HomeScreen(
                         IdleBody(
                             state = state,
                             onStart = { vm.startFast() },
-                            onLogWeight = { onNavigateTab(NavTab.Weight) },
-                            onOpenSettings = onOpenSettings,
                         )
                     }
                 }
@@ -283,11 +281,11 @@ private fun ActiveBody(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IntermButton(onClick = onEnd, variant = IntermButtonVariant.Soft, modifier = Modifier.weight(1f)) {
                 Icon(IntermIcons.Stop, contentDescription = null)
-                Text("End fast")
+                Text("End Fast")
             }
             IntermButton(onClick = onReset, variant = IntermButtonVariant.Danger, modifier = Modifier.weight(1f)) {
                 Icon(IntermIcons.Food, contentDescription = null)
-                Text("I ate")
+                Text("I Ate")
             }
         }
     }
@@ -297,8 +295,6 @@ private fun ActiveBody(
 private fun IdleBody(
     state: FastingUiState,
     onStart: () -> Unit,
-    onLogWeight: () -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     val c = IntermTheme.colors
     Column(
@@ -306,38 +302,25 @@ private fun IdleBody(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Ready when you are.", style = IntermTheme.typography.hTitle, color = c.ink)
-            Spacer(Modifier.height(10.dp))
+        IntermCard(modifier = Modifier.fillMaxWidth()) {
+            Text("READY", style = IntermTheme.typography.hEyebrow, color = c.muted)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Ready when you are.",
+                style = IntermTheme.typography.headerTitle.copy(fontSize = 18.sp),
+                color = c.ink,
+            )
+            Spacer(Modifier.height(6.dp))
             Text(
                 "Start a ${state.plan.label} fast. We'll track your progress through each metabolic phase.",
                 style = IntermTheme.typography.body,
                 color = c.ink2,
-                modifier = Modifier.widthIn(max = 320.dp),
             )
         }
 
         IntermButton(onClick = onStart, variant = IntermButtonVariant.Primary, fillWidth = true) {
             Icon(IntermIcons.Play, contentDescription = null)
-            Text("Start fasting")
-        }
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IntermButton(
-                onClick = onLogWeight,
-                variant = IntermButtonVariant.Ghost,
-                modifier = Modifier.weight(1f).height(44.dp),
-            ) {
-                Icon(IntermIcons.Scale, contentDescription = null)
-                Text("Log weight")
-            }
-            IntermButton(
-                onClick = onOpenSettings,
-                variant = IntermButtonVariant.Ghost,
-                modifier = Modifier.weight(1f).height(44.dp),
-            ) {
-                Text("Change plan")
-            }
+            Text("Start Fasting")
         }
     }
 }

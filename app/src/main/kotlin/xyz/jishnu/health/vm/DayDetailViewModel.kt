@@ -4,14 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import xyz.jishnu.health.data.local.FastingSessionEntity
-import xyz.jishnu.health.data.local.WeightEntryEntity
-import xyz.jishnu.health.data.model.DayEntries
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
@@ -22,13 +20,14 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlin.math.max
 
 data class DayDetailUiState(
     val loaded: Boolean = false,
     val dayKey: Long = 0,
     val date: LocalDate = LocalDate.now(),
     val startTime: String = "20:00",
-    val endTime: String = "12:00",
+    val endTime: String? = "12:00",
     val weightLb: Double = 150.0,
     val previousWeightLb: Double? = null,
     val notes: String = "",
@@ -36,8 +35,24 @@ data class DayDetailUiState(
     val goalHours: Int = 16,
     val sessionId: Long? = null,
     val weightId: Long? = null,
+    val isOngoing: Boolean = false,
+    val nowMs: Long = System.currentTimeMillis(),
+    val zone: ZoneId = ZoneId.systemDefault(),
 ) {
-    val durationHours: Double = TimeMath.diffHoursTime(startTime, endTime)
+    private val startInstantMs: Long
+        get() = date.atTime(TimeMath.parseTime(startTime)).atZone(zone).toInstant().toEpochMilli()
+
+    val durationHours: Double = if (endTime != null) {
+        TimeMath.diffHoursTime(startTime, endTime)
+    } else {
+        max(0L, nowMs - startInstantMs) / 3_600_000.0
+    }
+
+    val displayedEndTime: String? = if (endTime != null) endTime else {
+        val end = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalTime()
+        fmtLt(end)
+    }
+
     val goalMet: Boolean = durationHours >= goalHours
 }
 
@@ -56,6 +71,15 @@ class DayDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { load() }
+        viewModelScope.launch {
+            while (true) {
+                delay(1_000)
+                val s = _state.value
+                if (s.isOngoing && s.endTime == null) {
+                    _state.value = s.copy(nowMs = System.currentTimeMillis())
+                }
+            }
+        }
     }
 
     private suspend fun load() {
@@ -72,13 +96,25 @@ class DayDetailViewModel @Inject constructor(
 
         val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightLb
 
-        val (startStr, endStr) = if (session != null) {
+        val startStr: String
+        val endStr: String?
+        val isOngoing: Boolean
+
+        if (session != null) {
             val startLt = Instant.ofEpochMilli(session.startMs).atZone(zone).toLocalTime()
-            val endLt = (session.endMs ?: (session.startMs + session.goalHours * 3_600_000L))
-                .let { Instant.ofEpochMilli(it).atZone(zone).toLocalTime() }
-            fmtLt(startLt) to fmtLt(endLt)
+            startStr = fmtLt(startLt)
+            if (session.endMs != null) {
+                val endLt = Instant.ofEpochMilli(session.endMs).atZone(zone).toLocalTime()
+                endStr = fmtLt(endLt)
+                isOngoing = false
+            } else {
+                endStr = null
+                isOngoing = true
+            }
         } else {
-            settings.fastStartTime to TimeMath.addHoursToTime(settings.fastStartTime, plan.fastHours.toDouble())
+            startStr = settings.fastStartTime
+            endStr = TimeMath.addHoursToTime(settings.fastStartTime, plan.fastHours.toDouble())
+            isOngoing = false
         }
 
         _state.value = DayDetailUiState(
@@ -94,23 +130,31 @@ class DayDetailViewModel @Inject constructor(
             goalHours = session?.goalHours ?: plan.fastHours,
             sessionId = session?.id,
             weightId = weight?.id,
+            isOngoing = isOngoing,
+            nowMs = System.currentTimeMillis(),
+            zone = zone,
         )
     }
 
     fun setStart(hhmm: String) { _state.update { it.copy(startTime = hhmm) } }
-    fun setEnd(hhmm: String) { _state.update { it.copy(endTime = hhmm) } }
+
+    fun setEnd(hhmm: String) {
+        _state.update { it.copy(endTime = hhmm, isOngoing = false) }
+    }
+
     fun setNotes(value: String) { _state.update { it.copy(notes = value) } }
     fun setWeightLb(lb: Double) { _state.update { it.copy(weightLb = lb) } }
     fun bumpWeight(deltaLb: Double) { _state.update { it.copy(weightLb = it.weightLb + deltaLb) } }
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
-        val zone = ZoneId.systemDefault()
+        val zone = s.zone
         val startLt = TimeMath.parseTime(s.startTime)
-        val endLt = TimeMath.parseTime(s.endTime)
         val startInstant = s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-        val durationHours = TimeMath.diffHoursTime(s.startTime, s.endTime)
-        val endInstant = startInstant + (durationHours * 3_600_000.0).toLong()
+        val endInstant: Long? = s.endTime?.let { endStr ->
+            val durationHours = TimeMath.diffHoursTime(s.startTime, endStr)
+            startInstant + (durationHours * 3_600_000.0).toLong()
+        }
 
         val sessionId = s.sessionId
         if (sessionId != null) {
@@ -125,7 +169,7 @@ class DayDetailViewModel @Inject constructor(
                     )
                 )
             }
-        } else {
+        } else if (endInstant != null) {
             fastingRepo.startFast(startInstant, s.goalHours, "16:8").also { newId ->
                 val inserted = fastingRepo.sessionsInRange(s.dayKey, s.dayKey + 86_400_000L).first()
                     .firstOrNull { it.id == newId }

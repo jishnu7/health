@@ -77,8 +77,14 @@ object IntermIcons {
     val Scale = strokeIconMulti(
         "Scale",
         listOf(
-            "M3 4 H21 V20 H3 Z",
-            "M8 9h8M10 14l2-3 2 3",
+            // Rounded square body of a bathroom scale
+            "M6 5 H18 A1 1 0 0 1 19 6 V18 A1 1 0 0 1 18 19 H6 A1 1 0 0 1 5 18 V6 A1 1 0 0 1 6 5 Z",
+            // Round dial
+            "M12 8 A 4 4 0 1 0 12 16 A 4 4 0 1 0 12 8",
+            // Needle pointing upper-right
+            "M12 12 L 14.4 9.6",
+            // Tick at the top of the dial (12 o'clock mark)
+            "M12 8.4 V 9.4",
         ),
     )
     val Chart = strokeIcon(
@@ -95,8 +101,10 @@ object IntermIcons {
     val Settings = strokeIconMulti(
         "Settings",
         listOf(
-            "M12 9 A3 3 0 1 0 12 15 A3 3 0 1 0 12 9",
-            "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z",
+            // 6-tooth gear silhouette (star polygon between R=8 outer and R=5 inner)
+            "M12 4 L 14.5 7.7 L 18.9 8 L 17 12 L 18.9 16 L 14.5 16.3 L 12 20 L 9.5 16.3 L 5.1 16 L 7 12 L 5.1 8 L 9.5 7.7 Z",
+            // Center hole
+            "M 10 12 A 2 2 0 1 0 14 12 A 2 2 0 1 0 10 12",
         ),
     )
     val Plus = strokeIcon("Plus", "M12 5v14M5 12h14", width = 2f)

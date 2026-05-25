@@ -71,18 +71,18 @@ fun ComponentGalleryScreen(modifier: Modifier = Modifier) {
                 Section("Buttons") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         IntermButton(onClick = {}, variant = IntermButtonVariant.Primary, fillWidth = true) {
-                            Text("Start fasting")
+                            Text("Start Fasting")
                         }
                         IntermButton(onClick = {}, variant = IntermButtonVariant.Ghost, fillWidth = true) {
-                            Text("I already have an account")
+                            Text("I Already Have an Account")
                         }
                         IntermButton(onClick = {}, variant = IntermButtonVariant.Soft, fillWidth = true) {
                             Icon(IntermIcons.Check, contentDescription = null)
-                            Text("Goal met")
+                            Text("Goal Met")
                         }
                         IntermButton(onClick = {}, variant = IntermButtonVariant.Danger, fillWidth = true) {
                             Icon(IntermIcons.Stop, contentDescription = null)
-                            Text("End fast")
+                            Text("End Fast")
                         }
                     }
                 }

@@ -63,7 +63,11 @@ fun DayDetailScreen(
     val durationHours = state.durationHours
     val dh = durationHours.toInt()
     val dm = ((durationHours - dh) * 60).toInt()
-    val hit = state.goalMet
+    val status = when {
+        state.isOngoing -> xyz.jishnu.health.data.model.FastStatus.Ongoing
+        state.goalMet -> xyz.jishnu.health.data.model.FastStatus.Goal
+        else -> xyz.jishnu.health.data.model.FastStatus.Short
+    }
     val wf = WeightMath.fmtWeight(state.weightLb, state.units)
     val prevDelta = state.previousWeightLb?.let { state.weightLb - it } ?: 0.0
     val prevDeltaW = WeightMath.fmtWeight(abs(prevDelta), state.units)
@@ -100,17 +104,23 @@ fun DayDetailScreen(
                             Spacer(Modifier.width(2.dp))
                             Text("m", style = IntermTheme.typography.hDisplay.copy(fontSize = 22.sp), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
                         }
-                        GoalBadge(hit = hit)
+                        GoalBadge(status = status)
                     }
                     Spacer(Modifier.height(14.dp))
-                    GoalBar(durationHours = durationHours, goalH = state.goalHours, hit = hit)
+                    GoalBar(durationHours = durationHours, goalH = state.goalHours, status = status)
                     Spacer(Modifier.height(20.dp))
                 }
 
                 SectionLabel("Fasting window")
                 SettingsCard {
                     TimeRow(label = "Started", value = state.startTime, onValueChange = vm::setStart)
-                    TimeRow(label = "Ended", value = state.endTime, onValueChange = vm::setEnd)
+                    TimeRow(
+                        label = "Ended",
+                        value = state.displayedEndTime ?: "—",
+                        sub = if (state.isOngoing) "Fast is still running" else null,
+                        enabled = !state.isOngoing,
+                        onValueChange = vm::setEnd,
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -118,7 +128,11 @@ fun DayDetailScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Duration", style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500), color = c.ink)
                             Spacer(Modifier.height(2.dp))
-                            Text("Auto-calculated", style = IntermTheme.typography.caption, color = c.muted)
+                            Text(
+                                if (state.isOngoing) "Live, still running" else "Auto-calculated",
+                                style = IntermTheme.typography.caption,
+                                color = c.muted,
+                            )
                         }
                         Text(
                             "${dh}h ${dm.toString().padStart(2, '0')}m",
@@ -189,7 +203,7 @@ fun DayDetailScreen(
                         variant = IntermButtonVariant.Ghost,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text("Delete entry", color = c.accent)
+                        Text("Delete Entry", color = c.accent)
                     }
                     IntermButton(
                         onClick = { vm.save(onBack) },
@@ -231,10 +245,13 @@ private fun SettingsCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun GoalBadge(hit: Boolean) {
+private fun GoalBadge(status: xyz.jishnu.health.data.model.FastStatus) {
     val c = IntermTheme.colors
-    val bg = if (hit) c.primarySoft else c.accentSoft
-    val fg = if (hit) c.primary else c.accent
+    val (label, bg, fg) = when (status) {
+        xyz.jishnu.health.data.model.FastStatus.Goal -> Triple("GOAL MET", c.primarySoft, c.primary)
+        xyz.jishnu.health.data.model.FastStatus.Short -> Triple("SHORT", c.accentSoft, c.accent)
+        xyz.jishnu.health.data.model.FastStatus.Ongoing -> Triple("ONGOING", c.border2, c.ink2)
+    }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
@@ -242,7 +259,7 @@ private fun GoalBadge(hit: Boolean) {
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
         Text(
-            if (hit) "GOAL MET" else "SHORT",
+            label,
             style = IntermTheme.typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.W600, letterSpacing = 0.08.em()),
             color = fg,
         )
@@ -250,11 +267,15 @@ private fun GoalBadge(hit: Boolean) {
 }
 
 @Composable
-private fun GoalBar(durationHours: Double, goalH: Int, hit: Boolean) {
+private fun GoalBar(durationHours: Double, goalH: Int, status: xyz.jishnu.health.data.model.FastStatus) {
     val c = IntermTheme.colors
     val fillRatio = (durationHours / 24.0).coerceIn(0.0, 1.0).toFloat()
     val goalRatio = (goalH / 24f).coerceIn(0f, 1f)
-    val fg = if (hit) c.primary else c.accent
+    val fg = when (status) {
+        xyz.jishnu.health.data.model.FastStatus.Goal -> c.primary
+        xyz.jishnu.health.data.model.FastStatus.Short -> c.accent
+        xyz.jishnu.health.data.model.FastStatus.Ongoing -> c.ink2
+    }
     Box(modifier = Modifier.fillMaxWidth().height(18.dp)) {
         Canvas(modifier = Modifier.fillMaxWidth().height(18.dp)) {
             val w = size.width
