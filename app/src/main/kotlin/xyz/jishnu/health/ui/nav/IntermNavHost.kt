@@ -9,8 +9,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.daydetail.DayDetailScreen
-import xyz.jishnu.health.ui.screens.history.HistoryScreen
 import xyz.jishnu.health.ui.screens.home.HomeScreen
+import xyz.jishnu.health.ui.screens.progress.ProgressScreen
 import xyz.jishnu.health.ui.screens.settings.PlanPickerScreen
 import xyz.jishnu.health.ui.screens.settings.SettingsScreen
 import xyz.jishnu.health.ui.screens.stages.StagesScreen
@@ -64,7 +64,7 @@ fun IntermNavHost(
             )
         }
         composable(Routes.Progress) {
-            HistoryScreen(
+            ProgressScreen(
                 onNavigateTab = ::navigateTab,
                 onOpenDay = { dayKey -> navController.navigate("${Routes.DayDetail}/$dayKey") },
             )
