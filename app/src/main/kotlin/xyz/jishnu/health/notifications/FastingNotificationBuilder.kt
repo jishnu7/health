@@ -34,9 +34,12 @@ object FastingNotificationBuilder {
 
         val title = "Stage $stageIdx · ${stage.name}"
         val text = "${elapsed.hours}h ${elapsed.mm}m elapsed"
+        val chipText = if (elapsed.hours > 0) "${elapsed.hours}h ${elapsed.minutes}m"
+            else "${elapsed.minutes}m"
+        val fastEndMs = session.startMs + goalMs
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            buildLiveUpdate(context, title, text, progressPercent, session.goalHours)
+            buildLiveUpdate(context, title, text, chipText, progressPercent, session.goalHours, fastEndMs)
         } else {
             buildLegacy(context, title, text, progressPercent)
         }
@@ -47,8 +50,10 @@ object FastingNotificationBuilder {
         context: Context,
         title: String,
         text: String,
+        chipText: String,
         progressPercent: Int,
         goalHours: Int,
+        fastEndMs: Long,
     ): Notification {
         val primary = primaryColor(context)
         val style = Notification.ProgressStyle()
@@ -69,11 +74,18 @@ object FastingNotificationBuilder {
             .setSmallIcon(R.drawable.ic_notif_fast)
             .setContentTitle(title)
             .setContentText(text)
-            .setShowWhen(false)
+            .setShortCriticalText(chipText)
+            .setCategory(Notification.CATEGORY_STOPWATCH)
+            // Body chronometer: ticks down toward the predicted end of the fast.
+            .setWhen(fastEndMs)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setShowWhen(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setColor(primary)
+            .setRequestPromotedOngoing(true)
             .setContentIntent(openAppPending(context))
             .setStyle(style)
             .addAction(endAction)
