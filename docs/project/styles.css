@@ -1,0 +1,353 @@
+/* Fast — shared styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Geist', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme tokens — applied per .fast-app element */
+.fast-app {
+  --bg:         #f6f3ee;
+  --surface:    #fdfbf7;
+  --card:       #ffffff;
+  --ink:        #14130f;
+  --ink-2:      #3a3a36;
+  --muted:      #8a857c;
+  --subtle:     #b8b3a7;
+  --border:     #e8e3d8;
+  --border-2:   #f0ecdf;
+  --primary:    #2a4d3e;
+  --primary-2:  #3d6b56;
+  --primary-soft: #e7eee8;
+  --accent:     #d97757;
+  --accent-soft:#f7e7df;
+  --danger:     #b54734;
+  --warn:       #c69142;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-feature-settings: "ss01", "cv11";
+}
+
+.fast-app.dark {
+  --bg:         #14130f;
+  --surface:    #1c1b17;
+  --card:       #24221d;
+  --ink:        #f6f3ee;
+  --ink-2:      #d8d3c8;
+  --muted:      #8a857c;
+  --subtle:     #5a574f;
+  --border:     #2d2a23;
+  --border-2:   #26241e;
+  --primary:    #7dd3a8;
+  --primary-2:  #9adbb7;
+  --primary-soft: #1f2a23;
+  --accent:     #e89074;
+  --accent-soft: #2e211b;
+  --danger:     #e87164;
+  --warn:       #d9a35a;
+}
+
+.fast-app .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+.fast-app .tnum { font-variant-numeric: tabular-nums; }
+
+/* Reset for fragments rendered inside the AndroidDevice */
+.fast-app button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.fast-app input,
+.fast-app select {
+  font-family: inherit;
+  color: inherit;
+}
+
+.fast-screen {
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fast-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 20px 100px;
+}
+
+.fast-content::-webkit-scrollbar { display: none; }
+
+.fast-app .h-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fast-app .h-title {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.fast-app .h-display {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 56px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.fast-app .body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.fast-app .caption {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Card */
+.fast-app .card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+/* Buttons */
+.fast-app .btn {
+  height: 52px;
+  border-radius: 999px;
+  padding: 0 24px;
+  font-weight: 500;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform .12s ease, opacity .12s ease;
+}
+
+.fast-app .btn:active { transform: scale(0.98); }
+
+.fast-app .btn-primary {
+  background: var(--primary);
+  color: var(--surface);
+}
+.fast-app.dark .btn-primary { color: #14130f; }
+
+.fast-app .btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.fast-app .btn-soft {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.fast-app .btn-danger {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.fast-app .btn-full {
+  width: 100%;
+}
+
+/* Bottom nav */
+.fast-nav {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 8px 12px 14px;
+  gap: 4px;
+  z-index: 5;
+}
+
+.fast-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: 12px;
+}
+
+.fast-nav-item.active {
+  color: var(--ink);
+}
+
+.fast-nav-item.active .fast-nav-icon {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.fast-nav-icon {
+  width: 48px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  transition: background .15s;
+}
+
+/* Header bar inside a screen */
+.fast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 0;
+  min-height: 56px;
+}
+
+.fast-header-title {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.fast-iconbtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  transition: background .12s;
+}
+.fast-iconbtn:hover { background: var(--border-2); }
+
+/* Lists / rows */
+.fast-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fast-row:last-child { border-bottom: 0; }
+
+.fast-row-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.fast-row-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Segmented control */
+.fast-seg {
+  display: inline-flex;
+  background: var(--border-2);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.fast-seg-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.fast-seg-btn.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Stage chip */
+.fast-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fast-stage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Ring SVG sits on the home screen — set via inline */
+
+/* Toggle */
+.fast-toggle {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.fast-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform .18s ease;
+}
+.fast-toggle.on { background: var(--primary); }
+.fast-toggle.on::after { transform: translateX(18px); }
+
+/* Numeric stepper (weight entry) */
+.fast-num {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-weight: 400;
+}
+
+/* Subtle gridlines etc */
+.fast-app .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* Tweaks panel mounts itself; nothing to do here */
