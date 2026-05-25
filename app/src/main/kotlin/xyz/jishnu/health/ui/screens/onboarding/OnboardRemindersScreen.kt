@@ -1,5 +1,10 @@
 package xyz.jishnu.health.ui.screens.onboarding
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,12 +25,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +53,6 @@ import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.StepDots3
 import xyz.jishnu.health.ui.components.TimePickerDialog
 import xyz.jishnu.health.ui.theme.IntermTheme
-import xyz.jishnu.health.vm.FastingViewModel
 import xyz.jishnu.health.vm.SettingsViewModel
 
 @Composable
@@ -53,7 +60,6 @@ fun OnboardRemindersScreen(
     onBack: () -> Unit,
     onFinish: () -> Unit,
     settingsVm: SettingsViewModel = hiltViewModel(),
-    fastingVm: FastingViewModel,
 ) {
     val state by settingsVm.settings.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
@@ -62,6 +68,20 @@ fun OnboardRemindersScreen(
 
     var showFastStart by remember { mutableStateOf(false) }
     var showReminder by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* result ignored — toggle state already reflects the user's intent */ }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -140,14 +160,13 @@ fun OnboardRemindersScreen(
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = {
-                        fastingVm.startFast()
                         settingsVm.markOnboarded()
                         onFinish()
                     },
                     variant = IntermButtonVariant.Primary,
                     fillWidth = true,
                 ) {
-                    Text("Start Fasting")
+                    Text("Finish")
                 }
             }
         }

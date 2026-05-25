@@ -1,8 +1,10 @@
 package xyz.jishnu.health.vm
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,7 @@ import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
 import xyz.jishnu.health.domain.StageCalculator
+import xyz.jishnu.health.notifications.FastingForegroundService
 import javax.inject.Inject
 import kotlin.math.min
 
@@ -47,6 +50,7 @@ data class FastingUiState(
 class FastingViewModel @Inject constructor(
     private val fastingRepo: FastingRepository,
     private val settingsRepo: SettingsRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val tick = flow {
@@ -87,20 +91,26 @@ class FastingViewModel @Inject constructor(
         val s = settingsRepo.settings.first()
         val plan = Plans.byId(s.planId)
         fastingRepo.startFast(System.currentTimeMillis(), plan.fastHours, plan.id)
+        if (s.stickyNotificationOn) FastingForegroundService.start(appContext)
     }
 
     fun endFast() = viewModelScope.launch {
         val active = fastingRepo.activeSession.first() ?: return@launch
         fastingRepo.endFast(active.id, System.currentTimeMillis())
+        FastingForegroundService.stop(appContext)
     }
 
     fun resetFast() = viewModelScope.launch {
         val now = System.currentTimeMillis()
         val active = fastingRepo.activeSession.first()
-        active?.let { fastingRepo.endFast(it.id, now) }
         val s = settingsRepo.settings.first()
         val plan = Plans.byId(s.planId)
+        // Insert the new session first so activeSession never briefly emits null —
+        // that would tear down the foreground service mid-tap and races the
+        // Android 14+ "did not call startForeground in time" check on restart.
         fastingRepo.startFast(now, plan.fastHours, plan.id)
+        active?.let { fastingRepo.endFast(it.id, now) }
+        if (s.stickyNotificationOn) FastingForegroundService.start(appContext)
     }
 
     fun setPlan(id: String) = viewModelScope.launch { settingsRepo.setPlanId(id) }

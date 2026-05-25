@@ -12,6 +12,7 @@ class IntermApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        xyz.jishnu.health.notifications.NotifChannels.ensure(this)
         if (BuildConfig.DEBUG) seeder.seedIfEmpty()
     }
 }

@@ -73,7 +73,6 @@ fun IntermNavHost(
                         popUpTo(Routes.OnboardWelcome) { inclusive = true }
                     }
                 },
-                fastingVm = vm,
             )
         }
         composable(Routes.Home) {
