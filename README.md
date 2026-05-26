@@ -1,4 +1,4 @@
-# Interm
+# Intrmt
 
 A quiet companion for intermittent fasting that tracks your fast windows, body weight, and daily water intake — all on-device, with no ads and no nagging. Built native to Android.
 

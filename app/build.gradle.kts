@@ -52,7 +52,7 @@ android {
             // (gated by BuildConfig.DEBUG in IntermApplication).
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            resValue("string", "app_name", "Interm Dev")
+            resValue("string", "app_name", "Intrmt Dev")
         }
         release {
             isMinifyEnabled = true
@@ -61,7 +61,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            resValue("string", "app_name", "Interm")
+            resValue("string", "app_name", "Intrmt")
             // Only attach the signing config if a keystore is actually
             // configured; otherwise an unsigned release APK is built and the
             // user is reminded what's missing on bundle.
