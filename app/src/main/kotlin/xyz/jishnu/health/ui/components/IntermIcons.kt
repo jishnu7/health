@@ -70,10 +70,26 @@ private fun fillIcon(name: String, path: String): ImageVector =
     }.build()
 
 object IntermIcons {
-    val Home = strokeIcon(
-        "Home",
-        "M3 11l9-7 9 7v9a2 2 0 01-2 2h-4v-7h-6v7H5a2 2 0 01-2-2v-9z",
-    )
+    // Ring + progress dot — mirrors the launcher icon at navbar scale.
+    val Home = ImageVector.Builder(
+        name = "Home",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        addPath(
+            pathData = addPathNodes("M 12 4 A 8 8 0 1 1 12 20 A 8 8 0 1 1 12 4 Z"),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 1.7f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        )
+        addPath(
+            pathData = addPathNodes("M 4.39 12.97 A 1.5 1.5 0 1 1 4.39 15.97 A 1.5 1.5 0 1 1 4.39 12.97 Z"),
+            fill = SolidColor(Color.Black),
+        )
+    }.build()
     val Scale = strokeIconMulti(
         "Scale",
         listOf(

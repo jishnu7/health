@@ -4,14 +4,55 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 20 minor ticks (non-cardinal hours), forest green at 45% alpha. -->
     <path
-        android:pathData="M54,54m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"
+        android:pathData="
+            M 62.51 22.22 L 62.83 21.03
+            M 70.45 25.51 L 71.07 24.44
+            M 77.27 30.73 L 78.13 29.87
+            M 82.49 37.55 L 83.56 36.93
+            M 85.78 45.49 L 86.97 45.17
+            M 85.78 62.51 L 86.97 62.83
+            M 82.49 70.45 L 83.56 71.07
+            M 77.27 77.27 L 78.13 78.13
+            M 70.45 82.49 L 71.07 83.56
+            M 62.51 85.78 L 62.83 86.97
+            M 45.49 85.78 L 45.17 86.97
+            M 37.55 82.49 L 36.93 83.56
+            M 30.73 77.27 L 29.87 78.13
+            M 25.51 70.45 L 24.44 71.07
+            M 22.22 62.51 L 21.03 62.83
+            M 22.22 45.49 L 21.03 45.17
+            M 25.51 37.55 L 24.44 36.93
+            M 30.73 30.73 L 29.87 29.87
+            M 37.55 25.51 L 36.93 24.44
+            M 45.49 22.22 L 45.17 21.03"
         android:strokeColor="#2A4D3E"
-        android:strokeWidth="6"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M54,32 L54,54 L70,62"
-        android:strokeColor="#2A4D3E"
-        android:strokeWidth="5"
+        android:strokeAlpha="0.45"
+        android:strokeWidth="0.35"
         android:strokeLineCap="round" />
+
+    <!-- 4 cardinal ticks at 00 / 06 / 12 / 18, thicker + longer. -->
+    <path
+        android:pathData="
+            M 54 21.1 L 54 18.65
+            M 86.9 54 L 89.35 54
+            M 54 86.9 L 54 89.35
+            M 21.1 54 L 18.65 54"
+        android:strokeColor="#2A4D3E"
+        android:strokeAlpha="0.45"
+        android:strokeWidth="0.79"
+        android:strokeLineCap="round" />
+
+    <!-- Forest-green ring (r = 28, stroke = 7). -->
+    <path
+        android:pathData="M 54 26 A 28 28 0 1 1 54 82 A 28 28 0 1 1 54 26 Z"
+        android:strokeColor="#2A4D3E"
+        android:strokeWidth="7"
+        android:fillColor="#00000000" />
+
+    <!-- Terracotta dot at 70% progress (angle = −π/2 + 0.7·2π). -->
+    <path
+        android:pathData="M 27.37 57.575 A 5.075 5.075 0 1 1 27.37 67.725 A 5.075 5.075 0 1 1 27.37 57.575 Z"
+        android:fillColor="#D97757" />
 </vector>
