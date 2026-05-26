@@ -50,4 +50,5 @@ class SettingsViewModel @Inject constructor(
         scheduler.syncFromSettings(appContext, repo.settings.first())
     }
     fun markOnboarded() = viewModelScope.launch { repo.setOnboarded(true) }
+    fun setWaterGoalMl(ml: Int) = viewModelScope.launch { repo.setWaterGoalMl(ml) }
 }

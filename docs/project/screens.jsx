@@ -1,6 +1,204 @@
 // screens.jsx — All screens of the Fast app
 
 // ─────────────────────────────────────────────────────────────
+// WATER tracking
+// ─────────────────────────────────────────────────────────────
+function WaterGlass({ progress, size = 200 }) {
+  // SVG glass with a water fill that rises from the bottom.
+  const W = size, H = size;
+  const cupTopY = 30, cupBotY = H - 16;
+  const cupTopW = 110, cupBotW = 90;
+  const cx = W / 2;
+  const fillH = (cupBotY - cupTopY) * progress;
+  const fillTopY = cupBotY - fillH;
+  // Lerp width at fillTopY
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const t = (cupBotY - fillTopY) / (cupBotY - cupTopY); // 0 at bottom, 1 at top
+  const widthAtFill = lerp(cupBotW, cupTopW, t);
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+      <defs>
+        <clipPath id="glass-clip">
+          <path d={`M ${cx - cupTopW/2} ${cupTopY} L ${cx - cupBotW/2} ${cupBotY} Q ${cx} ${cupBotY + 8} ${cx + cupBotW/2} ${cupBotY} L ${cx + cupTopW/2} ${cupTopY} Z`} />
+        </clipPath>
+        <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--primary)" stopOpacity="0.55"/>
+          <stop offset="1" stopColor="var(--primary)" stopOpacity="0.85"/>
+        </linearGradient>
+      </defs>
+      {/* Water fill (inside clip) */}
+      <g clipPath="url(#glass-clip)">
+        {fillH > 0 && (
+          <>
+            <rect x="0" y={fillTopY} width={W} height={H} fill="url(#water-grad)" />
+            {/* meniscus highlight */}
+            <ellipse cx={cx} cy={fillTopY} rx={widthAtFill / 2} ry="3" fill="var(--primary)" opacity="0.25" />
+          </>
+        )}
+      </g>
+      {/* Glass outline */}
+      <path d={`M ${cx - cupTopW/2} ${cupTopY} L ${cx - cupBotW/2} ${cupBotY} Q ${cx} ${cupBotY + 8} ${cx + cupBotW/2} ${cupBotY} L ${cx + cupTopW/2} ${cupTopY}`}
+        fill="none" stroke="var(--border)" strokeWidth="1.5" />
+      {/* Rim */}
+      <line x1={cx - cupTopW/2} y1={cupTopY} x2={cx + cupTopW/2} y2={cupTopY} stroke="var(--border)" strokeWidth="1.5" />
+      {/* Tick marks on left side */}
+      {[0.25, 0.5, 0.75].map((frac) => {
+        const y = cupBotY - (cupBotY - cupTopY) * frac;
+        const w = lerp(cupBotW, cupTopW, frac);
+        return (
+          <line key={frac} x1={cx - w/2} x2={cx - w/2 + 6} y1={y} y2={y}
+            stroke="var(--subtle)" strokeWidth="1" />
+        );
+      })}
+    </svg>
+  );
+}
+
+function PresetButton({ preset, onClick, units }) {
+  const w = fmtWater(preset.ml, units);
+  // Vessel sizes
+  const heights = { sm: 22, md: 28, lg: 36, xl: 42 };
+  const widths = { sm: 14, md: 16, lg: 18, xl: 20 };
+  return (
+    <button onClick={onClick} style={{
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+      padding: '14px 6px', borderRadius: 14,
+      background: 'var(--card)', border: '1px solid var(--border)',
+      transition: 'transform .12s, background .15s',
+    }}>
+      <svg width="28" height={heights[preset.hint]} viewBox={`0 0 28 ${heights[preset.hint]}`}>
+        <path d={`M ${14 - widths[preset.hint]/2} 4 L ${14 - widths[preset.hint]/2 - 1} ${heights[preset.hint] - 2} Q 14 ${heights[preset.hint]} ${14 + widths[preset.hint]/2 + 1} ${heights[preset.hint] - 2} L ${14 + widths[preset.hint]/2} 4 Z`}
+          fill="var(--primary-soft)" stroke="var(--primary)" strokeWidth="1.2" />
+      </svg>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ink-2)' }}>
+        {preset.label}
+      </div>
+      <div className="tnum caption" style={{ fontSize: 11, color: 'var(--muted)' }}>
+        {w.val} {w.unit}
+      </div>
+    </button>
+  );
+}
+
+function WaterScreen({ onNav }) {
+  const f = useFast();
+  const total = fmtWater(f.waterTotal, f.units);
+  const goal = fmtWater(f.waterGoal, f.units);
+  const remaining = Math.max(0, f.waterGoal - f.waterTotal);
+  const rem = fmtWater(remaining, f.units);
+  const pct = Math.round(f.waterProgress * 100);
+
+  const [showCustom, setShowCustom] = React.useState(false);
+  const [customVal, setCustomVal] = React.useState(f.units === 'metric' ? '200' : '8');
+
+  const handleCustom = () => {
+    const n = parseFloat(customVal);
+    if (!n || n <= 0) return;
+    const ml = f.units === 'metric' ? n : ozToMl(n);
+    f.addWater(Math.round(ml));
+    setShowCustom(false);
+  };
+
+  return (
+    <div className="fast-screen">
+      <FastHeader title="Water" />
+      <div className="fast-content" style={{ paddingTop: 6 }}>
+
+        {/* Hero — glass + numbers */}
+        <div className="card" style={{ padding: 18, display: 'flex', gap: 14, alignItems: 'center' }}>
+          <WaterGlass progress={f.waterProgress} size={150} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="h-eyebrow">Today</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
+              <span className="h-display tnum" style={{ fontSize: 38 }}>{total.val}</span>
+              <span style={{ fontSize: 14, color: 'var(--muted)' }}>{total.unit}</span>
+            </div>
+            <div className="caption tnum" style={{ marginTop: 4 }}>
+              of {goal.val} {goal.unit} · {pct}%
+            </div>
+            <div style={{ marginTop: 12, height: 6, background: 'var(--border-2)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary)', borderRadius: 3, transition: 'width .25s' }} />
+            </div>
+            <div className="caption" style={{ marginTop: 8 }}>
+              {remaining > 0 ? `${rem.val} ${rem.unit} to go` : 'Goal reached'}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick add */}
+        <SectionLabel>Quick add</SectionLabel>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {WATER_PRESETS.map((p) => (
+            <PresetButton key={p.ml} preset={p} units={f.units} onClick={() => f.addWater(p.ml)} />
+          ))}
+        </div>
+
+        <button onClick={() => setShowCustom((s) => !s)}
+          style={{
+            marginTop: 10, width: '100%', padding: '12px 0', borderRadius: 100,
+            background: 'transparent', border: '1px dashed var(--border)',
+            color: 'var(--ink-2)', fontSize: 13, fontWeight: 500,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+          <Icon.Plus /> Custom amount
+        </button>
+
+        {showCustom && (
+          <div className="card" style={{ marginTop: 10, padding: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="number" value={customVal} onChange={(e) => setCustomVal(e.target.value)}
+              style={{
+                flex: 1, border: 0, background: 'var(--border-2)', borderRadius: 10,
+                padding: '10px 14px', fontFamily: 'Geist Mono', fontSize: 16, color: 'var(--ink)',
+                outline: 'none',
+              }} />
+            <span style={{ fontSize: 13, color: 'var(--muted)', minWidth: 36 }}>{f.units === 'metric' ? 'ml' : 'fl oz'}</span>
+            <button className="btn btn-primary" style={{ height: 40, padding: '0 16px', fontSize: 13 }} onClick={handleCustom}>Add</button>
+          </div>
+        )}
+
+        {/* Today's log */}
+        <SectionLabel>Today's log</SectionLabel>
+        {f.waterLog.length === 0 ? (
+          <div className="card" style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+            No drinks logged yet. Tap a preset above.
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '0 16px' }}>
+            {[...f.waterLog].reverse().map((entry, ri) => {
+              const i = f.waterLog.length - 1 - ri;
+              const w = fmtWater(entry.ml, f.units);
+              return (
+                <div key={i} className="fast-row" style={{
+                  padding: '14px 0',
+                  borderBottom: ri === f.waterLog.length - 1 ? 0 : '1px solid var(--border)',
+                }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--primary-soft)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon.Water />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="fast-row-label tnum">{w.val} {w.unit}</div>
+                    <div className="fast-row-sub tnum">{fmtTime(entry.time)}</div>
+                  </div>
+                  <button onClick={() => f.removeWaterAt(i)} className="fast-iconbtn"
+                    style={{ width: 32, height: 32, color: 'var(--muted)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+                      <path d="M6 6l12 12M6 18L18 6"/>
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+      <BottomNav active="water" onChange={onNav} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // HOME — fasting active or inactive
 // ─────────────────────────────────────────────────────────────
 function HomeScreen({ onNav, onShowStages }) {
@@ -585,6 +783,7 @@ function DayDetailScreen({ dayKey, onBack }) {
   }, [dayKey, f.history]);
 
   const goalH = f.planObj.fast;
+  const dayWaterMl = entry.waterMl || 0;
 
   // History entries only store fastHours — fabricate a plausible start/end
   // pair anchored to the user's configured fastStartTime. Editing these is
@@ -691,6 +890,10 @@ function DayDetailScreen({ dayKey, onBack }) {
           )}
         </div>
 
+        {/* Water */}
+        <SectionLabel>Water</SectionLabel>
+        <DayWaterCard ml={dayWaterMl} goalMl={f.waterGoal} units={f.units} />
+
         {/* Notes */}
         <SectionLabel>Notes</SectionLabel>
         <div className="card" style={{ padding: 14 }}>
@@ -714,6 +917,31 @@ function DayDetailScreen({ dayKey, onBack }) {
           </button>
         </div>
         <div style={{ height: 8 }} />
+      </div>
+    </div>
+  );
+}
+
+function DayWaterCard({ ml, goalMl, units }) {
+  const total = fmtWater(ml, units);
+  const goal = fmtWater(goalMl, units);
+  const pct = Math.min(100, Math.round((ml / goalMl) * 100));
+  const hit = ml >= goalMl;
+  return (
+    <div className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+      <WaterGlass progress={Math.min(1, ml / goalMl)} size={88} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+          <span className="tnum" style={{ fontSize: 24, fontWeight: 500 }}>{total.val}</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>{total.unit}</span>
+          {hit && (
+            <span style={{ marginLeft: 8, fontSize: 10, letterSpacing: '0.06em', color: 'var(--primary)', background: 'var(--primary-soft)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>GOAL</span>
+          )}
+        </div>
+        <div className="caption tnum" style={{ marginTop: 2 }}>of {goal.val} {goal.unit} · {pct}%</div>
+        <div style={{ marginTop: 10, height: 5, background: 'var(--border-2)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary)', borderRadius: 3 }} />
+        </div>
       </div>
     </div>
   );
@@ -778,6 +1006,15 @@ function SettingsScreen({ onNav, onBack }) {
             dim={!f.weightReminder} />
         </div>
 
+        <SectionLabel>Water</SectionLabel>
+        <div className="card" style={{ padding: '0 16px' }}>
+          <WaterGoalRow
+            label="Daily goal"
+            value={f.waterGoal}
+            onChange={f.setWaterGoal}
+            units={f.units} />
+        </div>
+
         <SectionLabel>About</SectionLabel>
         <div className="card" style={{ padding: '0 16px' }}>
           <NavRow label="Privacy policy" />
@@ -815,6 +1052,27 @@ function NavRow({ label, sub, trailing, onClick, hideChevron }) {
       </div>
       {trailing && <div className="caption tnum" style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}>{trailing}</div>}
       {!hideChevron && <Icon.Chevron style={{ color: 'var(--subtle)', marginLeft: trailing ? 8 : 0 }} />}
+    </button>
+  );
+}
+
+function WaterGoalRow({ label, value, onChange, units }) {
+  const PRESETS_ML = [1500, 2000, 2500, 3000, 3500, 4000];
+  const cur = fmtWater(value, units);
+  const cycle = () => {
+    const idx = PRESETS_ML.indexOf(value);
+    const next = idx === -1 ? 2500 : PRESETS_ML[(idx + 1) % PRESETS_ML.length];
+    onChange(next);
+  };
+  return (
+    <button className="fast-row" onClick={cycle} style={{ width: '100%', textAlign: 'left', padding: '18px 0' }}>
+      <div style={{ flex: 1 }}>
+        <div className="fast-row-label">{label}</div>
+        <div className="fast-row-sub">Tap to cycle: 1.5–4 L</div>
+      </div>
+      <div className="tnum" style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>
+        {cur.val} {cur.unit}
+      </div>
     </button>
   );
 }
@@ -1261,7 +1519,7 @@ function NotificationPanelScreen() {
 }
 
 Object.assign(window, {
-  HomeScreen, WeightScreen, ProgressScreen, HistoryScreen, SettingsScreen,
+  HomeScreen, WeightScreen, WaterScreen, ProgressScreen, HistoryScreen, SettingsScreen,
   PlanPickerScreen, DayDetailScreen,
   StagesScreen, OnboardWelcomeScreen, OnboardPlanScreen, OnboardRemindersScreen,
   NotificationPanelScreen,

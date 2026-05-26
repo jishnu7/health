@@ -17,12 +17,14 @@ import xyz.jishnu.health.ui.screens.progress.ProgressScreen
 import xyz.jishnu.health.ui.screens.settings.PlanPickerScreen
 import xyz.jishnu.health.ui.screens.settings.SettingsScreen
 import xyz.jishnu.health.ui.screens.stages.StagesScreen
+import xyz.jishnu.health.ui.screens.water.WaterScreen
 import xyz.jishnu.health.ui.screens.weight.WeightScreen
 import xyz.jishnu.health.vm.FastingViewModel
 
 object Routes {
     const val Home = "home"
     const val Weight = "weight"
+    const val Water = "water"
     const val Progress = "progress"
     const val Settings = "settings"
     const val Stages = "stages"
@@ -43,6 +45,7 @@ fun IntermNavHost(
         val route = when (tab) {
             NavTab.Today -> Routes.Home
             NavTab.Weight -> Routes.Weight
+            NavTab.Water -> Routes.Water
             NavTab.Progress -> Routes.Progress
         }
         navController.navigate(route) {
@@ -91,6 +94,9 @@ fun IntermNavHost(
                 onNavigateTab = ::navigateTab,
                 onBack = { navController.popBackStack() },
             )
+        }
+        composable(Routes.Water) {
+            WaterScreen(onNavigateTab = ::navigateTab)
         }
         composable(Routes.Progress) {
             ProgressScreen(

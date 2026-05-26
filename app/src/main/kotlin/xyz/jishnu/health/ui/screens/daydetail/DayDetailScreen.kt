@@ -40,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.model.FastStatus
+import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.domain.WeightMath
 import xyz.jishnu.health.ui.components.GoalChip
 import xyz.jishnu.health.ui.components.IntermButton
@@ -48,6 +49,7 @@ import xyz.jishnu.health.ui.components.IntermCard
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.TimeRow
+import xyz.jishnu.health.ui.screens.water.WaterGlass
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.DayDetailViewModel
 import java.time.Instant
@@ -188,6 +190,13 @@ fun DayDetailScreen(
                     }
                 }
 
+                SectionLabel("Water")
+                DayWaterCard(
+                    ml = state.waterMl,
+                    goalMl = state.waterGoalMl,
+                    units = state.units,
+                )
+
                 if (state.daySessions.size > 1) {
                     SectionLabel("Fasts on this day")
                     SettingsCard {
@@ -243,6 +252,78 @@ fun DayDetailScreen(
             }
         }
         Spacer(Modifier.navigationBarsPadding())
+    }
+}
+
+@Composable
+private fun DayWaterCard(ml: Int, goalMl: Int, units: xyz.jishnu.health.data.model.Units) {
+    val c = IntermTheme.colors
+    val total = WaterMath.fmtVolume(ml, units)
+    val goal = WaterMath.fmtVolume(goalMl, units)
+    val progress = if (goalMl > 0) (ml.toFloat() / goalMl.toFloat()).coerceIn(0f, 1f) else 0f
+    val pct = (progress * 100).toInt()
+    val hit = goalMl > 0 && ml >= goalMl
+    IntermCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            WaterGlass(progress = progress, size = 88.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        total.value,
+                        style = IntermTheme.typography.hDisplay.copy(fontSize = 24.sp, fontWeight = FontWeight.W500),
+                        color = c.ink,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        total.unit,
+                        style = IntermTheme.typography.body.copy(fontSize = 13.sp),
+                        color = c.muted,
+                        modifier = Modifier.padding(bottom = 2.dp),
+                    )
+                    if (hit) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(c.primarySoft)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                "GOAL",
+                                style = IntermTheme.typography.caption.copy(
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.W600,
+                                    letterSpacing = 0.06.em(),
+                                ),
+                                color = c.primary,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "of ${goal.value} ${goal.unit} · $pct%",
+                    style = IntermTheme.typography.mono.copy(fontSize = 12.sp),
+                    color = c.muted,
+                )
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(c.border2),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(c.primary),
+                    )
+                }
+            }
+        }
     }
 }
 

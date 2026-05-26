@@ -20,6 +20,7 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setReminderTime(hhmm: String) = store.setReminderTime(hhmm)
     override suspend fun setDarkMode(on: Boolean) = store.setDarkMode(on)
     override suspend fun setOnboarded(on: Boolean) = store.setOnboarded(on)
+    override suspend fun setWaterGoalMl(ml: Int) = store.setWaterGoalMl(ml)
 
     @Suppress("unused") private val _settings: Settings = Settings.Default
 }

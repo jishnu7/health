@@ -24,6 +24,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import xyz.jishnu.health.data.constants.Plans
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.TimeMath
+import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermSegmented
 import xyz.jishnu.health.ui.components.IntermTopBar
@@ -41,6 +45,7 @@ import xyz.jishnu.health.ui.components.NavRow
 import xyz.jishnu.health.ui.components.SegmentedOption
 import xyz.jishnu.health.ui.components.TimeRow
 import xyz.jishnu.health.ui.components.ToggleRow
+import xyz.jishnu.health.ui.components.WaterGoalDialog
 import xyz.jishnu.health.ui.components.rememberNotificationPermissionGranted
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.SettingsViewModel
@@ -138,6 +143,30 @@ fun SettingsScreen(
                         enabled = state.weightReminderOn && notifGranted,
                         showDivider = false,
                     )
+                }
+
+                SectionLabel("Water")
+                SettingsCard {
+                    val goalDisplay = WaterMath.fmtVolume(state.waterGoalMl, state.units)
+                    var showGoalDialog by remember { mutableStateOf(false) }
+                    NavRow(
+                        label = "Daily water goal",
+                        sub = "Auto-converts when units change",
+                        trailing = "${goalDisplay.value} ${goalDisplay.unit}",
+                        onClick = { showGoalDialog = true },
+                        showDivider = false,
+                    )
+                    if (showGoalDialog) {
+                        WaterGoalDialog(
+                            currentMl = state.waterGoalMl,
+                            units = state.units,
+                            onDismiss = { showGoalDialog = false },
+                            onConfirm = { newMl ->
+                                vm.setWaterGoalMl(newMl)
+                                showGoalDialog = false
+                            },
+                        )
+                    }
                 }
 
                 SectionLabel("About")

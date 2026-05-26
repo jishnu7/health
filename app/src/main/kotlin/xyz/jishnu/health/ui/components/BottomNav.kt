@@ -26,6 +26,7 @@ import xyz.jishnu.health.ui.theme.IntermTheme
 enum class NavTab(val label: String) {
     Today("Today"),
     Weight("Weight"),
+    Water("Water"),
     Progress("Progress"),
 }
 
@@ -60,6 +61,7 @@ fun BottomNav(
 private fun iconFor(tab: NavTab): ImageVector = when (tab) {
     NavTab.Today -> IntermIcons.Home
     NavTab.Weight -> IntermIcons.Scale
+    NavTab.Water -> IntermIcons.Water
     NavTab.Progress -> IntermIcons.Chart
 }
 

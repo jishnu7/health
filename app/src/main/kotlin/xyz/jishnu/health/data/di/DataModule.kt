@@ -15,12 +15,15 @@ import dagger.hilt.components.SingletonComponent
 import xyz.jishnu.health.data.local.FastingSessionDao
 import xyz.jishnu.health.data.local.IntermDatabase
 import xyz.jishnu.health.data.local.SettingsDataStore
+import xyz.jishnu.health.data.local.WaterEntryDao
 import xyz.jishnu.health.data.local.WeightEntryDao
 import xyz.jishnu.health.data.repo.DataStoreSettingsRepository
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.LocalFastingRepository
+import xyz.jishnu.health.data.repo.LocalWaterRepository
 import xyz.jishnu.health.data.repo.LocalWeightRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
+import xyz.jishnu.health.data.repo.WaterRepository
 import xyz.jishnu.health.data.repo.WeightRepository
 import javax.inject.Singleton
 
@@ -36,6 +39,7 @@ object DataModule {
 
     @Provides fun provideFastingSessionDao(db: IntermDatabase): FastingSessionDao = db.fastingSessionDao()
     @Provides fun provideWeightEntryDao(db: IntermDatabase): WeightEntryDao = db.weightEntryDao()
+    @Provides fun provideWaterEntryDao(db: IntermDatabase): WaterEntryDao = db.waterEntryDao()
 
     @Provides @Singleton
     fun provideSettingsDataStorePreferences(@ApplicationContext ctx: Context): DataStore<Preferences> =
@@ -54,4 +58,5 @@ abstract class RepoModule {
     @Binds @Singleton abstract fun bindFastingRepository(impl: LocalFastingRepository): FastingRepository
     @Binds @Singleton abstract fun bindSettingsRepository(impl: DataStoreSettingsRepository): SettingsRepository
     @Binds @Singleton abstract fun bindWeightRepository(impl: LocalWeightRepository): WeightRepository
+    @Binds @Singleton abstract fun bindWaterRepository(impl: LocalWaterRepository): WaterRepository
 }

@@ -43,6 +43,23 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
   const [fastingReminder, setFastingReminder] = React.useState(true);
   const [weightReminder, setWeightReminder] = React.useState(true);
 
+  // Water
+  const [waterGoal, setWaterGoal] = React.useState(2500); // ml
+  const [waterLog, setWaterLog] = React.useState(() => {
+    const t = new Date();
+    const at = (h, m) => { const d = new Date(t); d.setHours(h, m, 0, 0); return d; };
+    return [
+      { time: at(7, 30), ml: 250 },
+      { time: at(9, 15), ml: 500 },
+      { time: at(11, 45), ml: 350 },
+      { time: at(14, 10), ml: 500 },
+    ];
+  });
+  const addWater = (ml) => setWaterLog((l) => [...l, { time: new Date(), ml }]);
+  const removeWaterAt = (idx) => setWaterLog((l) => l.filter((_, i) => i !== idx));
+  const waterTotal = waterLog.reduce((a, b) => a + b.ml, 0);
+  const waterProgress = Math.min(1, waterTotal / waterGoal);
+
   // Sync from global defaults when they change
   React.useEffect(() => { if (defaultPlan) setPlan(defaultPlan); }, [defaultPlan]);
   React.useEffect(() => { if (defaultUnits) setUnits(defaultUnits); }, [defaultUnits]);
@@ -71,10 +88,12 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
       const d = new Date(today.getTime() - i * 86400000);
       const baseFast = 15 + Math.sin(i / 2) * 2 + rnd() * 1.5;
       const baseWeight = 178.4 - i * 0.18 + (rnd() - 0.5) * 1.2;
+      const baseWater = 2000 + rnd() * 1000;
       out.push({
         date: d,
         fastHours: Math.max(0, baseFast),
         weight: baseWeight,
+        waterMl: Math.round(baseWater),
       });
     }
     return out;
@@ -89,6 +108,7 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
     fastStartTime, setFastStartTime,
     fastingReminder, setFastingReminder,
     weightReminder, setWeightReminder,
+    waterGoal, setWaterGoal, waterLog, addWater, removeWaterAt, waterTotal, waterProgress,
     startFast, endFast, resetFast,
     speed,
     history,
@@ -182,6 +202,7 @@ function PhoneShell({ start, fixed }) {
     switch (effective) {
       case 'home': return <HomeScreen onNav={nav} onShowStages={showStages} />;
       case 'weight': return <WeightScreen onNav={nav} />;
+      case 'water': return <WaterScreen onNav={nav} />;
       case 'progress': return <ProgressScreen onNav={nav} />;
       case 'history': return <HistoryScreen onNav={nav} />;
       case 'settings': return <SettingsScreen onNav={nav} onBack={() => setPage('home')} />;
@@ -241,9 +262,12 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        <DCSection id="weight-progress" title="Weight & Progress" subtitle="Logging weight and seeing the trend">
+        <DCSection id="weight-progress" title="Weight & Water & Progress" subtitle="Daily logging and the trend">
           <DCArtboard id="weight" label="Weight entry" width={412} height={892}>
             <Phone start="weight" isFasting={true} offsetH={14.4} dark={t.dark} />
+          </DCArtboard>
+          <DCArtboard id="water" label="Water tracking" width={412} height={892}>
+            <Phone start="water" isFasting={true} offsetH={14.4} dark={t.dark} />
           </DCArtboard>
           <DCArtboard id="progress" label="Progress · Chart + history" width={412} height={892}>
             <Phone start="progress" isFasting={true} offsetH={14.4} dark={t.dark} />

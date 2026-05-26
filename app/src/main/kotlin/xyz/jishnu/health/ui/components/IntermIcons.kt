@@ -132,6 +132,13 @@ object IntermIcons {
     )
     val Stop = fillIcon("Stop", "M6 6h12v12h-12z")
     val Play = fillIcon("Play", "M7 5l12 7-12 7V5z")
+    val Water = strokeIconMulti(
+        "Water",
+        listOf(
+            "M12 2.5 C 16 7.5 18.5 10.7 18.5 14 A 6.5 6.5 0 1 1 5.5 14 C 5.5 10.7 8 7.5 12 2.5 Z",
+            "M9.5 14 A 3 3 0 0 0 12 16.5",
+        ),
+    )
     val Calendar = strokeIconMulti(
         "Calendar",
         listOf(

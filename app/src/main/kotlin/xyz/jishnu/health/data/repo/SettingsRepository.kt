@@ -15,4 +15,5 @@ interface SettingsRepository {
     suspend fun setReminderTime(hhmm: String)
     suspend fun setDarkMode(on: Boolean)
     suspend fun setOnboarded(on: Boolean)
+    suspend fun setWaterGoalMl(ml: Int)
 }

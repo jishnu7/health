@@ -140,6 +140,24 @@ function FastProvider({ children, demo = {} }) {
   const [fastingReminder, setFastingReminder] = React.useState(true);
   const [weightReminder, setWeightReminder] = React.useState(true);
 
+  // Water tracking
+  const [waterGoal, setWaterGoal] = React.useState(2500); // ml
+  // Today's log: array of { time: Date, ml: number }
+  const [waterLog, setWaterLog] = React.useState(() => {
+    const t = new Date();
+    const at = (h, m) => { const d = new Date(t); d.setHours(h, m, 0, 0); return d; };
+    return [
+      { time: at(7, 30), ml: 250 },
+      { time: at(9, 15), ml: 500 },
+      { time: at(11, 45), ml: 350 },
+      { time: at(14, 10), ml: 500 },
+    ];
+  });
+  const addWater = (ml) => setWaterLog((l) => [...l, { time: new Date(), ml }]);
+  const removeWaterAt = (idx) => setWaterLog((l) => l.filter((_, i) => i !== idx));
+  const waterTotal = waterLog.reduce((a, b) => a + b.ml, 0);
+  const waterProgress = Math.min(1, waterTotal / waterGoal);
+
   // Demo speed multiplier (1 = real, 60 = 1s ≈ 1m, etc).
   const [speed, setSpeed] = React.useState(demo.speed ?? 1);
 
@@ -155,7 +173,7 @@ function FastProvider({ children, demo = {} }) {
   const endFast = () => { setIsFasting(false); };
   const resetFast = () => { setFastStartMs(Date.now()); setIsFasting(true); };
 
-  // Mock history — fasting hours by day, weight by day (last 14 days).
+  // Mock history — fasting hours by day, weight by day, water ml by day (last 14 days).
   // Locked so charts are stable across renders.
   const history = React.useMemo(() => {
     const days = 14;
@@ -169,10 +187,12 @@ function FastProvider({ children, demo = {} }) {
       const d = new Date(today.getTime() - i * 86400000);
       const baseFast = 15 + Math.sin(i / 2) * 2 + rnd() * 1.5;
       const baseWeight = 178.4 - i * 0.18 + (rnd() - 0.5) * 1.2;
+      const baseWater = 2000 + rnd() * 1000; // 2000-3000ml
       out.push({
         date: d,
         fastHours: Math.max(0, baseFast),
         weight: baseWeight,
+        waterMl: Math.round(baseWater),
       });
     }
     return out;
@@ -187,6 +207,7 @@ function FastProvider({ children, demo = {} }) {
     fastStartTime, setFastStartTime,
     fastingReminder, setFastingReminder,
     weightReminder, setWeightReminder,
+    waterGoal, setWaterGoal, waterLog, addWater, removeWaterAt, waterTotal, waterProgress,
     startFast, endFast, resetFast,
     speed, setSpeed,
     history,
@@ -269,6 +290,12 @@ const Icon = {
       <path d="M12 3l6 9a6 6 0 11-12 0l6-9z"/>
     </svg>
   ),
+  Water: (p) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" {...p}>
+      <path d="M12 2.5c4 5 6.5 8.2 6.5 11.5a6.5 6.5 0 11-13 0c0-3.3 2.5-6.5 6.5-11.5z"/>
+      <path d="M9.5 14a3 3 0 002.5 2.5" opacity="0.5"/>
+    </svg>
+  ),
   Food: (p) => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M4 4v8a4 4 0 008 0V4M6 4v6M10 4v6M18 4c-2 0-3 3-3 7v3h6V4c-3 0-3 0-3 0zM18 14v6"/>
@@ -324,6 +351,21 @@ function fmtWeight(lb, units) {
   return { val: lb.toFixed(1), unit: 'lb' };
 }
 
+// Water. We store everything in ml internally and convert for display.
+function mlToOz(ml) { return ml / 29.5735; }
+function ozToMl(oz) { return oz * 29.5735; }
+function fmtWater(ml, units) {
+  if (units === 'metric') return { val: Math.round(ml).toString(), unit: 'ml' };
+  return { val: mlToOz(ml).toFixed(1), unit: 'fl oz' };
+}
+// Preset quick-add volumes (ml + label + size hint for visual)
+const WATER_PRESETS = [
+  { ml: 250, label: 'Glass',  hint: 'sm' },
+  { ml: 350, label: 'Cup',    hint: 'md' },
+  { ml: 500, label: 'Bottle', hint: 'lg' },
+  { ml: 750, label: 'Flask',  hint: 'xl' },
+];
+
 // ─────────────────────────────────────────────────────────────
 // Header / bottom nav UI components
 // ─────────────────────────────────────────────────────────────
@@ -341,6 +383,7 @@ function BottomNav({ active = 'home', onChange }) {
   const items = [
     { id: 'home', label: 'Today', icon: Icon.Home },
     { id: 'weight', label: 'Weight', icon: Icon.Scale },
+    { id: 'water', label: 'Water', icon: Icon.Water },
     { id: 'progress', label: 'Progress', icon: Icon.Chart },
   ];
   return (
@@ -400,6 +443,6 @@ function StageDots({ stages, currentIdx }) {
 Object.assign(window, {
   STAGES, PLANS, stageForHours,
   FastCtx, FastProvider, useFast,
-  Icon, fmtDuration, fmtTime, fmtDate, lbToKg, fmtWeight, addHoursToTime, diffHoursTime,
+  Icon, fmtDuration, fmtTime, fmtDate, lbToKg, fmtWeight, mlToOz, ozToMl, fmtWater, WATER_PRESETS, addHoursToTime, diffHoursTime,
   FastHeader, BottomNav, ProgressRing, StageDots,
 });

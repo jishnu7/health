@@ -14,6 +14,7 @@ import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
+import xyz.jishnu.health.data.repo.WaterRepository
 import xyz.jishnu.health.data.repo.WeightRepository
 import xyz.jishnu.health.domain.TimeMath
 import java.time.Instant
@@ -40,6 +41,8 @@ data class DayDetailUiState(
     val nowMs: Long = System.currentTimeMillis(),
     val zone: ZoneId = ZoneId.systemDefault(),
     val daySessions: List<FastingSessionEntity> = emptyList(),
+    val waterMl: Int = 0,
+    val waterGoalMl: Int = 2500,
 ) {
     private val startInstantMs: Long
         get() = date.atTime(TimeMath.parseTime(startTime)).atZone(zone).toInstant().toEpochMilli()
@@ -63,6 +66,7 @@ class DayDetailViewModel @Inject constructor(
     savedState: SavedStateHandle,
     private val fastingRepo: FastingRepository,
     private val weightRepo: WeightRepository,
+    private val waterRepo: WaterRepository,
     private val settingsRepo: SettingsRepository,
 ) : ViewModel() {
 
@@ -101,6 +105,7 @@ class DayDetailViewModel @Inject constructor(
             ?: sessions.firstOrNull { it.endMs == null }
             ?: sessions.maxByOrNull { (it.endMs ?: System.currentTimeMillis()) - it.startMs }
         val weight = weightRepo.findByDay(dayKey)
+        val waterMl = waterRepo.totalInRange(dayStart, dayEnd).first()
 
         val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightKg
 
@@ -142,6 +147,8 @@ class DayDetailViewModel @Inject constructor(
             nowMs = System.currentTimeMillis(),
             zone = zone,
             daySessions = sessions,
+            waterMl = waterMl,
+            waterGoalMl = settings.waterGoalMl,
         )
     }
 

@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,6 +20,7 @@ data class Settings(
     val reminderTime: String,
     val darkMode: Boolean,
     val onboarded: Boolean,
+    val waterGoalMl: Int,
 ) {
     companion object {
         val Default = Settings(
@@ -31,6 +33,7 @@ data class Settings(
             reminderTime = "07:30",
             darkMode = false,
             onboarded = false,
+            waterGoalMl = 2500,
         )
     }
 }
@@ -48,6 +51,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
             reminderTime = p[Keys.ReminderTime] ?: Settings.Default.reminderTime,
             darkMode = p[Keys.DarkMode] ?: Settings.Default.darkMode,
             onboarded = p[Keys.Onboarded] ?: Settings.Default.onboarded,
+            waterGoalMl = p[Keys.WaterGoalMl] ?: Settings.Default.waterGoalMl,
         )
     }
 
@@ -60,6 +64,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
     suspend fun setReminderTime(value: String) = edit { it[Keys.ReminderTime] = value }
     suspend fun setDarkMode(on: Boolean) = edit { it[Keys.DarkMode] = on }
     suspend fun setOnboarded(on: Boolean) = edit { it[Keys.Onboarded] = on }
+    suspend fun setWaterGoalMl(ml: Int) = edit { it[Keys.WaterGoalMl] = ml }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit { prefs -> block(prefs) }
@@ -75,5 +80,6 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
         val ReminderTime = stringPreferencesKey("reminder_time")
         val DarkMode = booleanPreferencesKey("dark_mode")
         val Onboarded = booleanPreferencesKey("onboarded")
+        val WaterGoalMl = intPreferencesKey("water_goal_ml")
     }
 }
