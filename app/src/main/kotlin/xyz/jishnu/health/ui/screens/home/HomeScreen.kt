@@ -2,7 +2,9 @@ package xyz.jishnu.health.ui.screens.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,62 +74,73 @@ fun HomeScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
 
-    val ringProgress = remember { Animatable(0f) }
+    // Initialised from the current state so coming back to Home with an active
+    // fast doesn't trigger any catch-up animation — only user actions (Start,
+    // End, I Ate) animate.
+    val ringProgress = remember { Animatable(if (state.isFasting) state.progress else 0f) }
     val dashAmount = remember { Animatable(if (state.isFasting) 0f else 1f) }
     var sweeping by remember { mutableStateOf(false) }
-    // A locally-driven mirror of `state.isFasting`. We hold it back until the
-    // sweep peaks so the center / chip / body crossfades line up with the ring
-    // refilling from zero, instead of fading on top of a still-sweeping ring.
+    // A locally-driven mirror of `state.isFasting`. We hold it back during a
+    // user-initiated wipe so the chip / center / body crossfades line up with
+    // the ring refilling, instead of fading on top of a still-sweeping ring.
     var displayFasting by remember { mutableStateOf(state.isFasting) }
-    // "I ate" reuses resetFast which fires the start-fast clockwise sweep via
-    // the LaunchedEffect on state.fastStartMs. This one-shot flag lets the
-    // handler tell that effect to skip the next change because it owns the
-    // animation itself.
-    var suppressNextStartSweep by remember { mutableStateOf(false) }
+    // Bumped to force the ring-center flip when "I ate" is tapped — the state
+    // shape stays the same (active fast) so a key derived from state alone
+    // wouldn't change.
+    var ringCenterFlipNonce by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    // Whenever the underlying state changes outside of a sweep (process restart,
-    // resetFast, …) catch the display state up so the two never get stuck out
-    // of sync.
+    // Mirror external state changes (process restart, notification action, etc.)
+    // without animating, but never while a user-initiated sweep is in flight.
     LaunchedEffect(state.isFasting, sweeping) {
-        if (!sweeping) displayFasting = state.isFasting
-    }
-
-    LaunchedEffect(state.fastStartMs) {
-        if (state.fastStartMs == null) return@LaunchedEffect
-        if (suppressNextStartSweep) {
-            suppressNextStartSweep = false
-            return@LaunchedEffect
+        if (!sweeping && displayFasting != state.isFasting) {
+            displayFasting = state.isFasting
+            if (!state.isFasting) {
+                ringProgress.snapTo(0f)
+                dashAmount.snapTo(1f)
+            }
         }
-        sweeping = true
-        displayFasting = false
-        // Mirror the I-ate / end-fast motion: snap to a full dashed ring and
-        // drain anti-clockwise. The new active state is revealed at the bottom
-        // of the wipe so the chip and numbers settle in with the ring fill.
-        dashAmount.snapTo(1f)
-        ringProgress.snapTo(1f)
-        ringProgress.animateTo(0f, tween(durationMillis = 900, easing = FastOutSlowInEasing))
-        displayFasting = true
-        sweeping = false
-        // Close the dash gaps and fill back up to the live progress in parallel
-        // so the dashed→solid transition is part of the same motion.
-        scope.launch {
-            dashAmount.animateTo(0f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
-        }
-        ringProgress.animateTo(
-            targetValue = state.progress,
-            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
-        )
     }
 
     LaunchedEffect(state.progress, sweeping, state.isFasting, displayFasting) {
         if (!sweeping && state.isFasting && displayFasting) {
-            ringProgress.animateTo(
-                targetValue = state.progress,
-                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
-            )
-        } else if (!state.isFasting && !sweeping) {
+            val diff = kotlin.math.abs(state.progress - ringProgress.value)
+            if (diff > 0.05f) {
+                // Large jumps (initial composition, navigation re-entry,
+                // background sync) snap silently — no user action triggered
+                // them so they shouldn't animate.
+                ringProgress.snapTo(state.progress)
+            } else {
+                // Per-second tick increments stay smooth.
+                ringProgress.animateTo(
+                    targetValue = state.progress,
+                    animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+                )
+            }
+        }
+    }
+
+    val onStartWithSweep: () -> Unit = {
+        scope.launch {
+            sweeping = true
+            displayFasting = false
+            // Clockwise wipe — fills the dashed ring from 0 to full as
+            // anticipation for the new fast. Peak of the wipe is the moment
+            // the active state takes over.
+            dashAmount.snapTo(1f)
             ringProgress.snapTo(0f)
+            ringProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            )
+            vm.startFast()
+            snapshotFlow { state.isFasting }.first { it }
+            displayFasting = true
+            // Drop back to empty so the progress mirror can ease into the
+            // (≈0) live value; dash gaps close in parallel.
+            ringProgress.snapTo(0f)
+            sweeping = false
+            dashAmount.animateTo(0f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
         }
     }
 
@@ -144,11 +158,13 @@ fun HomeScreen(
                 animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
             )
             val prevStartMs = state.fastStartMs
-            suppressNextStartSweep = true
             vm.resetFast()
             // Wait for the new fast's startMs to land so the progress mirror
             // doesn't briefly animate against stale data once sweeping clears.
             snapshotFlow { state.fastStartMs }.first { it != null && it != prevStartMs }
+            // Bump the flip key so the ring center pivots over to the fresh
+            // 00:00 reading instead of just instantly resetting in place.
+            ringCenterFlipNonce++
             sweeping = false
             // Close the dash gaps smoothly so the ring eases back to its
             // solid resting look instead of snapping.
@@ -216,14 +232,7 @@ fun HomeScreen(
                     stroke = RingStroke,
                     dashAmount = if (sweeping || !displayFasting) 1f else dashAmount.value,
                 ) {
-                    AnimatedContent(
-                        targetState = displayFasting,
-                        transitionSpec = {
-                            fadeIn(tween(durationMillis = 500, easing = FastOutSlowInEasing)) togetherWith
-                                fadeOut(tween(durationMillis = 220, easing = FastOutSlowInEasing))
-                        },
-                        label = "ring-center",
-                    ) { fasting ->
+                    FlipContent(targetState = displayFasting to ringCenterFlipNonce) { (fasting, _) ->
                         if (fasting) ActiveRingCenter(state) else IdleRingCenter(state)
                     }
                 }
@@ -248,7 +257,7 @@ fun HomeScreen(
                     } else {
                         IdleBody(
                             state = state,
-                            onStart = { vm.startFast() },
+                            onStart = onStartWithSweep,
                         )
                     }
                 }
@@ -260,6 +269,41 @@ fun HomeScreen(
                 modifier = Modifier.navigationBarsPadding(),
             )
         }
+    }
+}
+
+@Composable
+private fun <T> FlipContent(
+    targetState: T,
+    durationMillis: Int = 420,
+    content: @Composable (T) -> Unit,
+) {
+    var displayed by remember { mutableStateOf(targetState) }
+    val rotation = remember { Animatable(0f) }
+
+    LaunchedEffect(targetState) {
+        if (targetState != displayed) {
+            rotation.animateTo(
+                targetValue = 90f,
+                animationSpec = tween(durationMillis / 2, easing = FastOutLinearInEasing),
+            )
+            displayed = targetState
+            rotation.snapTo(-90f)
+            rotation.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis / 2, easing = LinearOutSlowInEasing),
+            )
+        }
+    }
+
+    Box(
+        modifier = Modifier.graphicsLayer {
+            rotationY = rotation.value
+            cameraDistance = 24f * density
+        },
+        contentAlignment = Alignment.Center,
+    ) {
+        content(displayed)
     }
 }
 
