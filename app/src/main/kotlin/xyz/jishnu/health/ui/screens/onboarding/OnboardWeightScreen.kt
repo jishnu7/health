@@ -82,7 +82,7 @@ fun OnboardWeightScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Column {
-                        Text("STEP 3 OF 5", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                        Text("STEP 3 OF 4", style = IntermTheme.typography.hEyebrow, color = c.muted)
                         Spacer(Modifier.height(8.dp))
                         Text("What do you weigh today?", style = IntermTheme.typography.hTitle, color = c.ink)
                         Spacer(Modifier.height(8.dp))
@@ -133,7 +133,7 @@ fun OnboardWeightScreen(
                     }
                 }
 
-                StepDots3(total = 5, currentStep = 3)
+                StepDots3(total = 4, currentStep = 3)
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = { weightVm.save { onContinue() } },

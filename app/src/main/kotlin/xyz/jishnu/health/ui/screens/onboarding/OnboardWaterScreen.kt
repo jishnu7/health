@@ -1,5 +1,8 @@
 package xyz.jishnu.health.ui.screens.onboarding
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,8 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import xyz.jishnu.health.data.constants.Plans
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.WaterMath
+import xyz.jishnu.health.ui.components.rememberNotificationPermissionGranted
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
 import xyz.jishnu.health.ui.components.IntermCard
@@ -59,7 +64,7 @@ private const val ML_PER_KG = 35
 @Composable
 fun OnboardWaterScreen(
     onBack: () -> Unit,
-    onContinue: () -> Unit,
+    onFinish: () -> Unit,
     settingsVm: SettingsViewModel = hiltViewModel(),
     weightVm: WeightViewModel = hiltViewModel(),
 ) {
@@ -94,6 +99,19 @@ fun OnboardWaterScreen(
     val previewVolume = WaterMath.fmtVolume(parsedMl, units)
     val suggestedVolume = WaterMath.fmtVolume(suggestedMl, units)
 
+    val notifGranted by rememberNotificationPermissionGranted()
+    var finishing by remember { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { _ ->
+        // Whether the user granted or denied, we've shown the system prompt
+        // exactly once — that's all the user asked for here. Continue home.
+        if (finishing) {
+            settingsVm.markOnboarded()
+            onFinish()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             IntermTopBar(
@@ -118,7 +136,7 @@ fun OnboardWaterScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Column {
-                        Text("STEP 4 OF 5", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                        Text("STEP 4 OF 4", style = IntermTheme.typography.hEyebrow, color = c.muted)
                         Spacer(Modifier.height(8.dp))
                         Text("Set a daily water goal.", style = IntermTheme.typography.hTitle, color = c.ink)
                         Spacer(Modifier.height(8.dp))
@@ -200,17 +218,30 @@ fun OnboardWaterScreen(
                     }
                 }
 
-                StepDots3(total = 5, currentStep = 4)
+                StepDots3(total = 4, currentStep = 4)
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = {
                         settingsVm.setWaterGoalMl(parsedMl.coerceAtLeast(1))
-                        onContinue()
+                        val plan = Plans.byId(settings.planId)
+                        val defaultFastStart = when (plan.fastHours) {
+                            14 -> "20:00"
+                            16 -> "19:00"
+                            else -> "18:00"
+                        }
+                        settingsVm.setFastStartTime(defaultFastStart)
+                        if (notifGranted) {
+                            settingsVm.markOnboarded()
+                            onFinish()
+                        } else {
+                            finishing = true
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
                     },
                     variant = IntermButtonVariant.Primary,
                     fillWidth = true,
                 ) {
-                    Text("Continue")
+                    Text("Finish")
                 }
             }
         }

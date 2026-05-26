@@ -10,7 +10,6 @@ import androidx.navigation.navArgument
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.daydetail.DayDetailScreen
 import xyz.jishnu.health.ui.screens.home.HomeScreen
-import xyz.jishnu.health.ui.screens.onboarding.OnboardNotificationsScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardPlanScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWaterScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWeightScreen
@@ -36,7 +35,6 @@ object Routes {
     const val OnboardPlan = "onboard-plan"
     const val OnboardWeight = "onboard-weight"
     const val OnboardWater = "onboard-water"
-    const val OnboardNotifications = "onboard-notifications"
 }
 
 @Composable
@@ -79,12 +77,6 @@ fun IntermNavHost(
         }
         composable(Routes.OnboardWater) {
             OnboardWaterScreen(
-                onBack = { navController.popBackStack() },
-                onContinue = { navController.navigate(Routes.OnboardNotifications) },
-            )
-        }
-        composable(Routes.OnboardNotifications) {
-            OnboardNotificationsScreen(
                 onBack = { navController.popBackStack() },
                 onFinish = {
                     navController.navigate(Routes.Home) {

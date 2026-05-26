@@ -71,7 +71,7 @@ fun OnboardPlanScreen(
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    Text("STEP 2 OF 5", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                    Text("STEP 2 OF 4", style = IntermTheme.typography.hEyebrow, color = c.muted)
                     Spacer(Modifier.height(8.dp))
                     Text("Choose a fasting plan.", style = IntermTheme.typography.hTitle, color = c.ink)
                     Spacer(Modifier.height(8.dp))
@@ -88,7 +88,7 @@ fun OnboardPlanScreen(
                     }
                     Spacer(Modifier.height(20.dp))
                 }
-                StepDots3(total = 5, currentStep = 2)
+                StepDots3(total = 4, currentStep = 2)
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = { vm.setPlanId(selected); onContinue() },
