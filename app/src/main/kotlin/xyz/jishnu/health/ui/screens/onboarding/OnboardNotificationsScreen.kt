@@ -127,31 +127,28 @@ fun OnboardNotificationsScreen(
                         onClick = { showReminder = true },
                     )
 
-                    IntermCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Fasting reminders",
-                                    style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
-                                    color = c.ink,
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    if (notifGranted) "When a fast is about to start or end"
-                                    else "Tap to grant notification permission",
-                                    style = IntermTheme.typography.caption,
-                                    color = c.muted,
-                                )
-                            }
-                            IntermToggle(
-                                checked = state.fastingReminderOn && notifGranted,
-                                onCheckedChange = { newValue ->
-                                    if (!notifGranted) requestNotifPermission()
-                                    else settingsVm.setFastingReminderOn(newValue)
-                                },
-                            )
-                        }
-                    }
+                    ReminderToggleCard(
+                        label = "Fasting reminders",
+                        subOn = "When a fast is about to start or end",
+                        subOff = "Tap to grant notification permission",
+                        checked = state.fastingReminderOn && notifGranted,
+                        notifGranted = notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else settingsVm.setFastingReminderOn(newValue)
+                        },
+                    )
+                    ReminderToggleCard(
+                        label = "Hydration reminders",
+                        subOn = "Paced nudges when you fall behind",
+                        subOff = "Tap to grant notification permission",
+                        checked = state.waterReminderOn && notifGranted,
+                        notifGranted = notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else settingsVm.setWaterReminderOn(newValue)
+                        },
+                    )
                 }
 
                 StepDots3(total = 5, currentStep = 5)
@@ -193,6 +190,36 @@ private fun SectionLabel(text: String) {
         style = IntermTheme.typography.hEyebrow,
         color = IntermTheme.colors.muted,
     )
+}
+
+@Composable
+private fun ReminderToggleCard(
+    label: String,
+    subOn: String,
+    subOff: String,
+    checked: Boolean,
+    notifGranted: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val c = IntermTheme.colors
+    IntermCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    label,
+                    style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
+                    color = c.ink,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (notifGranted) subOn else subOff,
+                    style = IntermTheme.typography.caption,
+                    color = c.muted,
+                )
+            }
+            IntermToggle(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
 }
 
 @Composable

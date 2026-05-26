@@ -40,6 +40,10 @@ class SettingsViewModel @Inject constructor(
         repo.setWeightReminderOn(on)
         scheduler.syncFromSettings(appContext, repo.settings.first())
     }
+    fun setWaterReminderOn(on: Boolean) = viewModelScope.launch {
+        repo.setWaterReminderOn(on)
+        scheduler.syncFromSettings(appContext, repo.settings.first())
+    }
     fun setStickyNotificationOn(on: Boolean) = viewModelScope.launch { repo.setStickyNotificationOn(on) }
     fun setFastStartTime(hhmm: String) = viewModelScope.launch {
         repo.setFastStartTime(hhmm)

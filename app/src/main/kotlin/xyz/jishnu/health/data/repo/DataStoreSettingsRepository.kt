@@ -15,6 +15,7 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setUnits(units: Units) = store.setUnits(units)
     override suspend fun setFastingReminderOn(on: Boolean) = store.setFastingReminderOn(on)
     override suspend fun setWeightReminderOn(on: Boolean) = store.setWeightReminderOn(on)
+    override suspend fun setWaterReminderOn(on: Boolean) = store.setWaterReminderOn(on)
     override suspend fun setStickyNotificationOn(on: Boolean) = store.setStickyNotificationOn(on)
     override suspend fun setFastStartTime(hhmm: String) = store.setFastStartTime(hhmm)
     override suspend fun setReminderTime(hhmm: String) = store.setReminderTime(hhmm)

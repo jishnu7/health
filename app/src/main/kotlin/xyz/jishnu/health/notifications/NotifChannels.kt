@@ -10,10 +10,12 @@ object NotifChannels {
     const val FASTING_STICKY = "fasting_sticky"
     const val FASTING_REMINDERS = "fasting_reminders"
     const val WEIGHT_REMINDERS = "weight_reminders"
+    const val WATER_REMINDERS = "water_reminders"
 
     const val STICKY_NOTIFICATION_ID = 1001
     const val FASTING_REMINDER_NOTIFICATION_ID = 1002
     const val WEIGHT_REMINDER_NOTIFICATION_ID = 1003
+    const val WATER_REMINDER_NOTIFICATION_ID = 1004
 
     fun ensure(context: Context) {
         val manager = context.getSystemService<NotificationManager>() ?: return
@@ -45,6 +47,15 @@ object NotifChannels {
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description = "Daily reminder to log your weight."
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                WATER_REMINDERS,
+                "Water reminders",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "Nudges to keep your water intake on pace through the day."
             },
         )
     }

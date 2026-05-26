@@ -15,6 +15,7 @@ data class Settings(
     val units: Units,
     val fastingReminderOn: Boolean,
     val weightReminderOn: Boolean,
+    val waterReminderOn: Boolean,
     val stickyNotificationOn: Boolean,
     val fastStartTime: String,
     val reminderTime: String,
@@ -28,6 +29,7 @@ data class Settings(
             units = Units.Metric,
             fastingReminderOn = true,
             weightReminderOn = true,
+            waterReminderOn = true,
             stickyNotificationOn = true,
             fastStartTime = "20:00",
             reminderTime = "07:30",
@@ -46,6 +48,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
             units = (p[Keys.Units] ?: Settings.Default.units.name).let { runCatching { Units.valueOf(it) }.getOrDefault(Units.Metric) },
             fastingReminderOn = p[Keys.FastingReminderOn] ?: Settings.Default.fastingReminderOn,
             weightReminderOn = p[Keys.WeightReminderOn] ?: Settings.Default.weightReminderOn,
+            waterReminderOn = p[Keys.WaterReminderOn] ?: Settings.Default.waterReminderOn,
             stickyNotificationOn = p[Keys.StickyNotificationOn] ?: Settings.Default.stickyNotificationOn,
             fastStartTime = p[Keys.FastStartTime] ?: Settings.Default.fastStartTime,
             reminderTime = p[Keys.ReminderTime] ?: Settings.Default.reminderTime,
@@ -59,6 +62,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
     suspend fun setUnits(units: Units) = edit { it[Keys.Units] = units.name }
     suspend fun setFastingReminderOn(on: Boolean) = edit { it[Keys.FastingReminderOn] = on }
     suspend fun setWeightReminderOn(on: Boolean) = edit { it[Keys.WeightReminderOn] = on }
+    suspend fun setWaterReminderOn(on: Boolean) = edit { it[Keys.WaterReminderOn] = on }
     suspend fun setStickyNotificationOn(on: Boolean) = edit { it[Keys.StickyNotificationOn] = on }
     suspend fun setFastStartTime(value: String) = edit { it[Keys.FastStartTime] = value }
     suspend fun setReminderTime(value: String) = edit { it[Keys.ReminderTime] = value }
@@ -75,6 +79,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
         val Units = stringPreferencesKey("units")
         val FastingReminderOn = booleanPreferencesKey("fasting_reminder_on")
         val WeightReminderOn = booleanPreferencesKey("weight_reminder_on")
+        val WaterReminderOn = booleanPreferencesKey("water_reminder_on")
         val StickyNotificationOn = booleanPreferencesKey("sticky_notification_on")
         val FastStartTime = stringPreferencesKey("fast_start_time")
         val ReminderTime = stringPreferencesKey("reminder_time")

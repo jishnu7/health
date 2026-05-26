@@ -153,6 +153,16 @@ fun SettingsScreen(
                         label = "Daily water goal",
                         trailing = "${goalDisplay.value} ${goalDisplay.unit}",
                         onClick = { showGoalDialog = true },
+                    )
+                    ToggleRow(
+                        label = "Hydration reminders",
+                        sub = if (notifGranted) "Paced nudges when you fall behind"
+                        else "Tap to grant notification permission",
+                        checked = state.waterReminderOn && notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else vm.setWaterReminderOn(newValue)
+                        },
                         showDivider = false,
                     )
                     if (showGoalDialog) {

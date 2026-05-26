@@ -10,6 +10,7 @@ interface SettingsRepository {
     suspend fun setUnits(units: Units)
     suspend fun setFastingReminderOn(on: Boolean)
     suspend fun setWeightReminderOn(on: Boolean)
+    suspend fun setWaterReminderOn(on: Boolean)
     suspend fun setStickyNotificationOn(on: Boolean)
     suspend fun setFastStartTime(hhmm: String)
     suspend fun setReminderTime(hhmm: String)

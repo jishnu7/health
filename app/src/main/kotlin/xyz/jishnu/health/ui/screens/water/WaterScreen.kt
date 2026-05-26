@@ -56,6 +56,7 @@ import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.domain.WaterPreset
+import xyz.jishnu.health.domain.WaterReminders
 import xyz.jishnu.health.ui.components.BottomNav
 import xyz.jishnu.health.ui.components.IntermCard
 import xyz.jishnu.health.ui.components.IntermIcons
@@ -80,10 +81,24 @@ fun WaterScreen(
 
     var showCustom by remember { mutableStateOf(false) }
     var customText by remember { mutableStateOf(if (state.units == Units.Metric) "200" else "8") }
+    var showSchedule by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            IntermTopBar(modifier = Modifier.statusBarsPadding(), title = "Water")
+            IntermTopBar(
+                modifier = Modifier.statusBarsPadding(),
+                title = "Water",
+                trailing = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { showSchedule = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(IntermIcons.Help, contentDescription = "Hydration schedule", tint = c.ink2)
+                    }
+                },
+            )
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -194,6 +209,81 @@ fun WaterScreen(
                 onChange = onNavigateTab,
                 modifier = Modifier.navigationBarsPadding(),
             )
+        }
+    }
+
+    if (showSchedule) {
+        HydrationScheduleDialog(
+            goalMl = state.goalMl,
+            units = state.units,
+            onDismiss = { showSchedule = false },
+        )
+    }
+}
+
+@Composable
+private fun HydrationScheduleDialog(goalMl: Int, units: Units, onDismiss: () -> Unit) {
+    val c = IntermTheme.colors
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(22.dp))
+                .background(c.card)
+                .padding(20.dp),
+        ) {
+            Text("Hydration schedule", style = IntermTheme.typography.headerTitle, color = c.ink)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "We pace your daily goal across five windows. A gentle nudge fires at the end of each window only if you're behind the cumulative target.",
+                style = IntermTheme.typography.caption,
+                color = c.muted,
+            )
+            Spacer(Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(c.border2)
+                    .padding(horizontal = 14.dp),
+            ) {
+                WaterReminders.windows.forEachIndexed { idx, w ->
+                    val targetMl = WaterReminders.cumulativeTargetMl(w.index, goalMl)
+                    val targetLabel = formatTargetForSchedule(targetMl, units)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                w.label(),
+                                style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
+                                color = c.ink,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "by ${w.cumulativePct}% · $targetLabel",
+                                style = IntermTheme.typography.caption,
+                                color = c.muted,
+                            )
+                        }
+                        Text(
+                            "${w.sharePct}%",
+                            style = IntermTheme.typography.mono.copy(fontSize = 14.sp, fontWeight = FontWeight.W500),
+                            color = c.ink,
+                        )
+                    }
+                    if (idx != WaterReminders.windows.lastIndex) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                xyz.jishnu.health.ui.components.IntermButton(
+                    onClick = onDismiss,
+                    variant = xyz.jishnu.health.ui.components.IntermButtonVariant.Primary,
+                ) { Text("Got it") }
+            }
         }
     }
 }
@@ -499,6 +589,17 @@ private fun LogRow(
             }
         }
         if (!isLast) Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
+    }
+}
+
+private fun formatTargetForSchedule(targetMl: Int, units: Units): String = when (units) {
+    Units.Metric -> {
+        val rounded = ((targetMl + 5) / 10) * 10
+        "$rounded ml"
+    }
+    Units.Imperial -> {
+        val rounded = kotlin.math.round(WaterMath.mlToOz(targetMl)).toInt()
+        "$rounded fl oz"
     }
 }
 
