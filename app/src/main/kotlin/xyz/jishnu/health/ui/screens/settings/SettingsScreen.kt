@@ -123,6 +123,19 @@ fun SettingsScreen(
                             if (!notifGranted) requestNotifPermission()
                             else vm.setStickyNotificationOn(newValue)
                         },
+                    )
+                    ToggleRow(
+                        label = "Live update",
+                        sub = when {
+                            !notifGranted -> "Tap to grant notification permission"
+                            !state.stickyNotificationOn -> "Turn on sticky notification first"
+                            else -> "Status-bar chip with elapsed time (Android 16+)"
+                        },
+                        checked = state.liveUpdateOn && state.stickyNotificationOn && notifGranted,
+                        onCheckedChange = { newValue ->
+                            if (!notifGranted) requestNotifPermission()
+                            else vm.setLiveUpdateOn(newValue)
+                        },
                         showDivider = false,
                     )
                 }

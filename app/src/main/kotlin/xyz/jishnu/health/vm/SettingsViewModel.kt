@@ -49,15 +49,20 @@ class SettingsViewModel @Inject constructor(
     }
     fun setStickyNotificationOn(on: Boolean) = viewModelScope.launch {
         repo.setStickyNotificationOn(on)
-        // Sync the foreground service immediately so the live-update
-        // notification disappears as soon as the toggle goes off (and comes
-        // back if it's flipped on again during an active fast).
+        // Sync the foreground service immediately so the sticky notification
+        // disappears as soon as the toggle goes off (and comes back if it's
+        // flipped on again during an active fast).
         val active = fastingRepo.activeSession.first()
         if (on) {
             if (active != null) FastingForegroundService.start(appContext)
         } else {
             FastingForegroundService.stop(appContext)
         }
+    }
+    fun setLiveUpdateOn(on: Boolean) = viewModelScope.launch {
+        // The foreground service observes this flag and re-posts itself, so we
+        // don't need to start/stop here — only when sticky changes.
+        repo.setLiveUpdateOn(on)
     }
     fun setFastStartTime(hhmm: String) = viewModelScope.launch {
         repo.setFastStartTime(hhmm)

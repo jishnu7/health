@@ -21,6 +21,7 @@ object FastingNotificationBuilder {
     fun build(
         context: Context,
         session: FastingSessionEntity,
+        useLiveUpdate: Boolean = true,
         nowMs: Long = System.currentTimeMillis(),
     ): Notification {
         val elapsedMs = (nowMs - session.startMs).coerceAtLeast(0L)
@@ -38,7 +39,7 @@ object FastingNotificationBuilder {
             else "${elapsed.minutes}m"
         val fastEndMs = session.startMs + goalMs
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+        return if (useLiveUpdate && Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             buildLiveUpdate(context, title, text, chipText, progressPercent, session.goalHours, fastEndMs)
         } else {
             buildLegacy(context, title, text, progressPercent)

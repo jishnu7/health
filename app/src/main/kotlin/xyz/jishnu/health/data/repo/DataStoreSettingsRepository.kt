@@ -17,6 +17,7 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setWeightReminderOn(on: Boolean) = store.setWeightReminderOn(on)
     override suspend fun setWaterReminderOn(on: Boolean) = store.setWaterReminderOn(on)
     override suspend fun setStickyNotificationOn(on: Boolean) = store.setStickyNotificationOn(on)
+    override suspend fun setLiveUpdateOn(on: Boolean) = store.setLiveUpdateOn(on)
     override suspend fun setFastStartTime(hhmm: String) = store.setFastStartTime(hhmm)
     override suspend fun setReminderTime(hhmm: String) = store.setReminderTime(hhmm)
     override suspend fun setDarkMode(on: Boolean) = store.setDarkMode(on)

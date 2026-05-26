@@ -17,6 +17,7 @@ data class Settings(
     val weightReminderOn: Boolean,
     val waterReminderOn: Boolean,
     val stickyNotificationOn: Boolean,
+    val liveUpdateOn: Boolean,
     val fastStartTime: String,
     val reminderTime: String,
     val darkMode: Boolean,
@@ -31,6 +32,7 @@ data class Settings(
             weightReminderOn = true,
             waterReminderOn = true,
             stickyNotificationOn = true,
+            liveUpdateOn = true,
             fastStartTime = "20:00",
             reminderTime = "07:30",
             darkMode = false,
@@ -50,6 +52,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
             weightReminderOn = p[Keys.WeightReminderOn] ?: Settings.Default.weightReminderOn,
             waterReminderOn = p[Keys.WaterReminderOn] ?: Settings.Default.waterReminderOn,
             stickyNotificationOn = p[Keys.StickyNotificationOn] ?: Settings.Default.stickyNotificationOn,
+            liveUpdateOn = p[Keys.LiveUpdateOn] ?: Settings.Default.liveUpdateOn,
             fastStartTime = p[Keys.FastStartTime] ?: Settings.Default.fastStartTime,
             reminderTime = p[Keys.ReminderTime] ?: Settings.Default.reminderTime,
             darkMode = p[Keys.DarkMode] ?: Settings.Default.darkMode,
@@ -64,6 +67,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
     suspend fun setWeightReminderOn(on: Boolean) = edit { it[Keys.WeightReminderOn] = on }
     suspend fun setWaterReminderOn(on: Boolean) = edit { it[Keys.WaterReminderOn] = on }
     suspend fun setStickyNotificationOn(on: Boolean) = edit { it[Keys.StickyNotificationOn] = on }
+    suspend fun setLiveUpdateOn(on: Boolean) = edit { it[Keys.LiveUpdateOn] = on }
     suspend fun setFastStartTime(value: String) = edit { it[Keys.FastStartTime] = value }
     suspend fun setReminderTime(value: String) = edit { it[Keys.ReminderTime] = value }
     suspend fun setDarkMode(on: Boolean) = edit { it[Keys.DarkMode] = on }
@@ -81,6 +85,7 @@ class SettingsDataStore(private val dataStore: DataStore<Preferences>) {
         val WeightReminderOn = booleanPreferencesKey("weight_reminder_on")
         val WaterReminderOn = booleanPreferencesKey("water_reminder_on")
         val StickyNotificationOn = booleanPreferencesKey("sticky_notification_on")
+        val LiveUpdateOn = booleanPreferencesKey("live_update_on")
         val FastStartTime = stringPreferencesKey("fast_start_time")
         val ReminderTime = stringPreferencesKey("reminder_time")
         val DarkMode = booleanPreferencesKey("dark_mode")

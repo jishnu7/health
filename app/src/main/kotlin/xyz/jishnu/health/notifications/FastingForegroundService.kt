@@ -20,20 +20,24 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import xyz.jishnu.health.R
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.repo.FastingRepository
+import xyz.jishnu.health.data.repo.SettingsRepository
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class FastingForegroundService : Service() {
 
     @Inject lateinit var fastingRepo: FastingRepository
+    @Inject lateinit var settingsRepo: SettingsRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var watchJob: Job? = null
     @Volatile private var activeSession: FastingSessionEntity? = null
+    @Volatile private var useLiveUpdate: Boolean = true
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -49,7 +53,7 @@ class FastingForegroundService : Service() {
         // deadline, so re-promote synchronously here on top of onCreate's placeholder.
         val snapshot = activeSession
         val notif = snapshot
-            ?.let { FastingNotificationBuilder.build(applicationContext, it) }
+            ?.let { FastingNotificationBuilder.build(applicationContext, it, useLiveUpdate) }
             ?: buildPlaceholder()
         startForegroundCompat(notif)
         observeAndPost()
@@ -63,6 +67,12 @@ class FastingForegroundService : Service() {
                 fastingRepo.activeSession.distinctUntilChanged().collectLatest { session ->
                     activeSession = session
                     if (session == null) stopForegroundAndSelf() else post(session)
+                }
+            }
+            launch {
+                settingsRepo.settings.map { it.liveUpdateOn }.distinctUntilChanged().collect { on ->
+                    useLiveUpdate = on
+                    activeSession?.let { post(it) }
                 }
             }
             launch {
@@ -84,7 +94,7 @@ class FastingForegroundService : Service() {
             .build()
 
     private fun post(session: FastingSessionEntity) {
-        startForegroundCompat(FastingNotificationBuilder.build(applicationContext, session))
+        startForegroundCompat(FastingNotificationBuilder.build(applicationContext, session, useLiveUpdate))
     }
 
     private fun startForegroundCompat(notification: Notification) {
