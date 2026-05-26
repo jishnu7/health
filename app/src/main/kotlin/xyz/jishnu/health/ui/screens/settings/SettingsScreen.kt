@@ -151,7 +151,6 @@ fun SettingsScreen(
                     var showGoalDialog by remember { mutableStateOf(false) }
                     NavRow(
                         label = "Daily water goal",
-                        sub = "Auto-converts when units change",
                         trailing = "${goalDisplay.value} ${goalDisplay.unit}",
                         onClick = { showGoalDialog = true },
                         showDivider = false,

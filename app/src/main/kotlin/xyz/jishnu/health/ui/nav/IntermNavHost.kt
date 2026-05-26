@@ -10,8 +10,10 @@ import androidx.navigation.navArgument
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.daydetail.DayDetailScreen
 import xyz.jishnu.health.ui.screens.home.HomeScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardNotificationsScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardPlanScreen
-import xyz.jishnu.health.ui.screens.onboarding.OnboardRemindersScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardWaterScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardWeightScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWelcomeScreen
 import xyz.jishnu.health.ui.screens.progress.ProgressScreen
 import xyz.jishnu.health.ui.screens.settings.PlanPickerScreen
@@ -32,7 +34,9 @@ object Routes {
     const val DayDetail = "day-detail"
     const val OnboardWelcome = "onboard-welcome"
     const val OnboardPlan = "onboard-plan"
-    const val OnboardReminders = "onboard-reminders"
+    const val OnboardWeight = "onboard-weight"
+    const val OnboardWater = "onboard-water"
+    const val OnboardNotifications = "onboard-notifications"
 }
 
 @Composable
@@ -59,17 +63,28 @@ fun IntermNavHost(
         composable(Routes.OnboardWelcome) {
             OnboardWelcomeScreen(
                 onGetStarted = { navController.navigate(Routes.OnboardPlan) },
-                onSignIn = { navController.navigate(Routes.OnboardPlan) },
             )
         }
         composable(Routes.OnboardPlan) {
             OnboardPlanScreen(
                 onBack = { navController.popBackStack() },
-                onContinue = { navController.navigate(Routes.OnboardReminders) },
+                onContinue = { navController.navigate(Routes.OnboardWeight) },
             )
         }
-        composable(Routes.OnboardReminders) {
-            OnboardRemindersScreen(
+        composable(Routes.OnboardWeight) {
+            OnboardWeightScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.OnboardWater) },
+            )
+        }
+        composable(Routes.OnboardWater) {
+            OnboardWaterScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.OnboardNotifications) },
+            )
+        }
+        composable(Routes.OnboardNotifications) {
+            OnboardNotificationsScreen(
                 onBack = { navController.popBackStack() },
                 onFinish = {
                     navController.navigate(Routes.Home) {

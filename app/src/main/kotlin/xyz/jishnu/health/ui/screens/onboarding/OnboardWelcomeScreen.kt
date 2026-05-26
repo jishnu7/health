@@ -28,7 +28,6 @@ import xyz.jishnu.health.ui.theme.IntermTheme
 @Composable
 fun OnboardWelcomeScreen(
     onGetStarted: () -> Unit,
-    onSignIn: () -> Unit,
 ) {
     val c = IntermTheme.colors
 
@@ -66,15 +65,11 @@ fun OnboardWelcomeScreen(
                 }
             }
 
-            StepDots3(currentStep = 1)
+            StepDots3(total = 5, currentStep = 1)
             Spacer(Modifier.height(18.dp))
             IntermButton(onClick = onGetStarted, variant = IntermButtonVariant.Primary, fillWidth = true) {
                 Text("Get Started")
                 Icon(IntermIcons.Chevron, contentDescription = null)
-            }
-            Spacer(Modifier.height(10.dp))
-            IntermButton(onClick = onSignIn, variant = IntermButtonVariant.Ghost, fillWidth = true) {
-                Text("I Already Have an Account")
             }
         }
     }

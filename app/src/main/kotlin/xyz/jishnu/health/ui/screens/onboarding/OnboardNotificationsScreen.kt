@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,15 +29,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import xyz.jishnu.health.data.constants.Plans
-import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
@@ -53,7 +49,7 @@ import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.SettingsViewModel
 
 @Composable
-fun OnboardRemindersScreen(
+fun OnboardNotificationsScreen(
     onBack: () -> Unit,
     onFinish: () -> Unit,
     settingsVm: SettingsViewModel = hiltViewModel(),
@@ -102,13 +98,16 @@ fun OnboardRemindersScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Column {
-                        Text("STEP 3 OF 3", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                        Text("STEP 5 OF 5", style = IntermTheme.typography.hEyebrow, color = c.muted)
                         Spacer(Modifier.height(8.dp))
-                        Text("A few preferences.", style = IntermTheme.typography.hTitle, color = c.ink)
+                        Text("Stay on track with reminders.", style = IntermTheme.typography.hTitle, color = c.ink)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Allow notifications to get gentle nudges for fast windows and your daily weigh-in.",
+                            style = IntermTheme.typography.body,
+                            color = c.ink2,
+                        )
                     }
-
-                    SectionLabel("Units")
-                    UnitsCard(units = state.units, onSelect = settingsVm::setUnits)
 
                     SectionLabel("Fasting start")
                     PreferenceCard(
@@ -155,7 +154,7 @@ fun OnboardRemindersScreen(
                     }
                 }
 
-                StepDots3(currentStep = 3)
+                StepDots3(total = 5, currentStep = 5)
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = {
@@ -194,51 +193,6 @@ private fun SectionLabel(text: String) {
         style = IntermTheme.typography.hEyebrow,
         color = IntermTheme.colors.muted,
     )
-}
-
-@Composable
-private fun UnitsCard(units: Units, onSelect: (Units) -> Unit) {
-    val c = IntermTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(c.card)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        UnitsTab(
-            label = "Metric (kg)",
-            active = units == Units.Metric,
-            onClick = { onSelect(Units.Metric) },
-            modifier = Modifier.weight(1f),
-        )
-        UnitsTab(
-            label = "Imperial (lb)",
-            active = units == Units.Imperial,
-            onClick = { onSelect(Units.Imperial) },
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun UnitsTab(label: String, active: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val c = IntermTheme.colors
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (active) c.primarySoft else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            style = IntermTheme.typography.body.copy(fontSize = 14.sp, fontWeight = if (active) FontWeight.W600 else FontWeight.W500),
-            color = if (active) c.primary else c.ink2,
-        )
-    }
 }
 
 @Composable
