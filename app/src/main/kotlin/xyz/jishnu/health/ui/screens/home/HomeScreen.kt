@@ -71,21 +71,44 @@ fun HomeScreen(
 
     val ringProgress = remember { Animatable(0f) }
     var sweeping by remember { mutableStateOf(false) }
+    // A locally-driven mirror of `state.isFasting`. We hold it back until the
+    // sweep peaks so the center / chip / body crossfades line up with the ring
+    // refilling from zero, instead of fading on top of a still-sweeping ring.
+    var displayFasting by remember { mutableStateOf(state.isFasting) }
     val scope = rememberCoroutineScope()
+
+    // Whenever the underlying state changes outside of a sweep (process restart,
+    // resetFast, …) catch the display state up so the two never get stuck out
+    // of sync.
+    LaunchedEffect(state.isFasting, sweeping) {
+        if (!sweeping) displayFasting = state.isFasting
+    }
 
     LaunchedEffect(state.fastStartMs) {
         if (state.fastStartMs != null) {
             sweeping = true
+            displayFasting = false
             ringProgress.snapTo(0f)
             ringProgress.animateTo(1f, tween(durationMillis = 900, easing = FastOutSlowInEasing))
+            // Sweep just peaked. Reset the ring and reveal the active state by
+            // letting it progress up to its real value with a calm ease so the
+            // numbers and chip fade in over the same motion.
+            displayFasting = true
             ringProgress.snapTo(0f)
             sweeping = false
+            ringProgress.animateTo(
+                targetValue = state.progress,
+                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+            )
         }
     }
 
     LaunchedEffect(state.progress, sweeping, state.isFasting) {
         if (!sweeping && state.isFasting) {
-            ringProgress.animateTo(state.progress, tween(durationMillis = 400))
+            ringProgress.animateTo(
+                targetValue = state.progress,
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+            )
         } else if (!state.isFasting && !sweeping) {
             ringProgress.snapTo(0f)
         }
@@ -97,7 +120,13 @@ fun HomeScreen(
             val from = ringProgress.value
             ringProgress.snapTo(from)
             ringProgress.animateTo(1f, tween(durationMillis = 900, easing = FastOutSlowInEasing))
-            ringProgress.snapTo(0f)
+            // Sweep peaks → reveal idle state with the same calm down-to-zero
+            // motion as the start animation's up-to-progress motion.
+            displayFasting = false
+            ringProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+            )
             sweeping = false
             vm.endFast()
         }
@@ -129,7 +158,7 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                ChipSlot(state)
+                ChipSlot(state = state, displayFasting = displayFasting)
 
                 Spacer(Modifier.height(22.dp))
 
@@ -137,11 +166,14 @@ fun HomeScreen(
                     progress = ringProgress.value,
                     size = RingSize,
                     stroke = RingStroke,
-                    dashed = sweeping || !state.isFasting,
+                    dashed = sweeping || !displayFasting,
                 ) {
                     AnimatedContent(
-                        targetState = state.isFasting,
-                        transitionSpec = { fadeIn(tween(220, delayMillis = 80)) togetherWith fadeOut(tween(160)) },
+                        targetState = displayFasting,
+                        transitionSpec = {
+                            fadeIn(tween(durationMillis = 500, easing = FastOutSlowInEasing)) togetherWith
+                                fadeOut(tween(durationMillis = 220, easing = FastOutSlowInEasing))
+                        },
                         label = "ring-center",
                     ) { fasting ->
                         if (fasting) ActiveRingCenter(state) else IdleRingCenter(state)
@@ -151,10 +183,10 @@ fun HomeScreen(
                 Spacer(Modifier.height(22.dp))
 
                 AnimatedContent(
-                    targetState = state.isFasting,
+                    targetState = displayFasting,
                     transitionSpec = {
-                        (fadeIn(tween(durationMillis = 240, delayMillis = 80)) togetherWith
-                            fadeOut(tween(durationMillis = 160)))
+                        fadeIn(tween(durationMillis = 520, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(tween(durationMillis = 220, easing = FastOutSlowInEasing))
                     },
                     label = "home-body",
                 ) { fasting ->
@@ -184,15 +216,18 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ChipSlot(state: FastingUiState) {
+private fun ChipSlot(state: FastingUiState, displayFasting: Boolean) {
     val c = IntermTheme.colors
     Box(
         modifier = Modifier.defaultMinSize(minHeight = 28.dp),
         contentAlignment = Alignment.Center,
     ) {
         AnimatedContent(
-            targetState = state.isFasting,
-            transitionSpec = { fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
+            targetState = displayFasting,
+            transitionSpec = {
+                fadeIn(tween(durationMillis = 500, easing = FastOutSlowInEasing)) togetherWith
+                    fadeOut(tween(durationMillis = 220, easing = FastOutSlowInEasing))
+            },
             label = "chip-slot",
         ) { fasting ->
             if (fasting) {
