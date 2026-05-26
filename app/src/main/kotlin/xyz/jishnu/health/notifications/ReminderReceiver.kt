@@ -85,7 +85,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentTitle("Time to start your fast")
             .setContentText("Begin your fasting window now to stay on track.")
             .setAutoCancel(true)
-            .setContentIntent(openAppPending(context))
+            .setContentIntent(openAppPending(context, requestCode = 1001, route = null))
             .build()
 
     private fun buildWeighInReminder(context: Context) =
@@ -94,7 +94,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentTitle("Daily weigh-in")
             .setContentText("Take a moment to log today's weight.")
             .setAutoCancel(true)
-            .setContentIntent(openAppPending(context))
+            .setContentIntent(openAppPending(context, requestCode = 1002, route = "weight"))
             .build()
 
     private fun buildWaterReminder(
@@ -122,16 +122,21 @@ class ReminderReceiver : BroadcastReceiver() {
                 ),
             )
             .setAutoCancel(true)
-            .setContentIntent(openAppPending(context))
+            .setContentIntent(openAppPending(context, requestCode = 1003, route = "water"))
             .build()
     }
 
-    private fun openAppPending(context: Context): android.app.PendingIntent {
+    private fun openAppPending(
+        context: Context,
+        requestCode: Int,
+        route: String?,
+    ): android.app.PendingIntent {
         val intent = Intent(context, xyz.jishnu.health.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            if (route != null) putExtra(xyz.jishnu.health.MainActivity.EXTRA_OPEN_ROUTE, route)
         }
         return android.app.PendingIntent.getActivity(
-            context, 0, intent,
+            context, requestCode, intent,
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
         )
     }

@@ -41,8 +41,25 @@ object Routes {
 fun IntermNavHost(
     vm: FastingViewModel,
     startDestination: String = Routes.Home,
+    deepLinkRoute: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
 ) {
+    androidx.compose.runtime.LaunchedEffect(deepLinkRoute) {
+        val route = deepLinkRoute ?: return@LaunchedEffect
+        // Don't break the onboarding flow; we only honour deep links once the
+        // user has reached the main app.
+        if (startDestination != Routes.Home) {
+            onDeepLinkConsumed()
+            return@LaunchedEffect
+        }
+        navController.navigate(route) {
+            popUpTo(Routes.Home) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+        onDeepLinkConsumed()
+    }
     fun navigateTab(tab: NavTab) {
         val route = when (tab) {
             NavTab.Today -> Routes.Home
