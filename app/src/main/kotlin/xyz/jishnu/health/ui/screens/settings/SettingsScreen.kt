@@ -32,9 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import xyz.jishnu.health.BuildConfig
 import xyz.jishnu.health.data.constants.Plans
+import xyz.jishnu.health.notifications.ReminderNotifications
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.domain.WaterMath
@@ -184,6 +187,39 @@ fun SettingsScreen(
                     NavRow(label = "Help & support", onClick = {})
                     NavRow(label = "Version", trailing = "0.1.0", showChevron = false, showDivider = false)
                 }
+
+                if (BuildConfig.DEBUG) {
+                    val context = LocalContext.current
+                    SectionLabel("Developer")
+                    SettingsCard {
+                        NavRow(
+                            label = "Test fasting reminder",
+                            sub = "Posts the daily fast-start nudge now",
+                            showChevron = false,
+                            onClick = { ReminderNotifications.fireFastingTest(context) },
+                        )
+                        NavRow(
+                            label = "Test weigh-in reminder",
+                            sub = "Posts the daily weigh-in nudge now",
+                            showChevron = false,
+                            onClick = { ReminderNotifications.fireWeighInTest(context) },
+                        )
+                        NavRow(
+                            label = "Test water reminder",
+                            sub = "Posts a hydration nudge for the first window",
+                            showChevron = false,
+                            showDivider = false,
+                            onClick = {
+                                ReminderNotifications.fireWaterTest(
+                                    context = context,
+                                    goalMl = state.waterGoalMl,
+                                    units = state.units,
+                                )
+                            },
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(24.dp))
             }
         }

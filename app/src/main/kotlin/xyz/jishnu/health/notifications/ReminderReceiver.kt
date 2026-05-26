@@ -4,7 +4,6 @@ import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -12,10 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import xyz.jishnu.health.R
 import xyz.jishnu.health.data.repo.SettingsRepository
 import xyz.jishnu.health.data.repo.WaterRepository
-import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.domain.WaterReminders
 import java.time.LocalDate
 import java.time.ZoneId
@@ -41,7 +38,7 @@ class ReminderReceiver : BroadcastReceiver() {
                         if (settings.fastingReminderOn) {
                             nm?.notify(
                                 NotifChannels.FASTING_REMINDER_NOTIFICATION_ID,
-                                buildFastingReminder(context),
+                                ReminderNotifications.buildFastingReminder(context),
                             )
                             scheduler.scheduleNext(context, ReminderScheduler.Kind.FastingStart, settings.fastStartTime)
                         }
@@ -50,7 +47,7 @@ class ReminderReceiver : BroadcastReceiver() {
                         if (settings.weightReminderOn) {
                             nm?.notify(
                                 NotifChannels.WEIGHT_REMINDER_NOTIFICATION_ID,
-                                buildWeighInReminder(context),
+                                ReminderNotifications.buildWeighInReminder(context),
                             )
                             scheduler.scheduleNext(context, ReminderScheduler.Kind.WeighIn, settings.reminderTime)
                         }
@@ -66,7 +63,14 @@ class ReminderReceiver : BroadcastReceiver() {
                             if (totalMl < targetMl) {
                                 nm?.notify(
                                     NotifChannels.WATER_REMINDER_NOTIFICATION_ID,
-                                    buildWaterReminder(context, totalMl, targetMl, settings.waterGoalMl, settings.units, windowIndex),
+                                    ReminderNotifications.buildWaterReminder(
+                                        context = context,
+                                        totalMl = totalMl,
+                                        targetMl = targetMl,
+                                        goalMl = settings.waterGoalMl,
+                                        units = settings.units,
+                                        windowIndex = windowIndex,
+                                    ),
                                 )
                             }
                             scheduler.scheduleNextWater(context)
@@ -77,67 +81,5 @@ class ReminderReceiver : BroadcastReceiver() {
                 pending.finish()
             }
         }
-    }
-
-    private fun buildFastingReminder(context: Context) =
-        NotificationCompat.Builder(context, NotifChannels.FASTING_REMINDERS)
-            .setSmallIcon(R.drawable.ic_notif_fast)
-            .setContentTitle("Time to start your fast")
-            .setContentText("Begin your fasting window now to stay on track.")
-            .setAutoCancel(true)
-            .setContentIntent(openAppPending(context, requestCode = 1001, route = null))
-            .build()
-
-    private fun buildWeighInReminder(context: Context) =
-        NotificationCompat.Builder(context, NotifChannels.WEIGHT_REMINDERS)
-            .setSmallIcon(R.drawable.ic_notif_fast)
-            .setContentTitle("Daily weigh-in")
-            .setContentText("Take a moment to log today's weight.")
-            .setAutoCancel(true)
-            .setContentIntent(openAppPending(context, requestCode = 1002, route = "weight"))
-            .build()
-
-    private fun buildWaterReminder(
-        context: Context,
-        totalMl: Int,
-        targetMl: Int,
-        goalMl: Int,
-        units: xyz.jishnu.health.data.model.Units,
-        windowIndex: Int,
-    ): android.app.Notification {
-        val remaining = (targetMl - totalMl).coerceAtLeast(0)
-        val remainingFmt = WaterMath.fmtVolume(remaining, units)
-        val totalFmt = WaterMath.fmtVolume(totalMl, units)
-        val goalFmt = WaterMath.fmtVolume(goalMl, units)
-        val window = WaterReminders.windows.getOrNull(windowIndex)
-        val cumPct = window?.cumulativePct ?: 0
-        return NotificationCompat.Builder(context, NotifChannels.WATER_REMINDERS)
-            .setSmallIcon(R.drawable.ic_notif_fast)
-            .setContentTitle("Time to hydrate")
-            .setContentText("${remainingFmt.value} ${remainingFmt.unit} short of your $cumPct% checkpoint.")
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    "You've had ${totalFmt.value} ${totalFmt.unit} of ${goalFmt.value} ${goalFmt.unit} today. " +
-                        "By now you'd typically be at $cumPct% — grab a glass to catch up.",
-                ),
-            )
-            .setAutoCancel(true)
-            .setContentIntent(openAppPending(context, requestCode = 1003, route = "water"))
-            .build()
-    }
-
-    private fun openAppPending(
-        context: Context,
-        requestCode: Int,
-        route: String?,
-    ): android.app.PendingIntent {
-        val intent = Intent(context, xyz.jishnu.health.MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            if (route != null) putExtra(xyz.jishnu.health.MainActivity.EXTRA_OPEN_ROUTE, route)
-        }
-        return android.app.PendingIntent.getActivity(
-            context, requestCode, intent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
-        )
     }
 }
