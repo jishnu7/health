@@ -38,7 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import xyz.jishnu.health.data.local.FastingSessionEntity
+import xyz.jishnu.health.data.model.FastStatus
 import xyz.jishnu.health.domain.WeightMath
+import xyz.jishnu.health.ui.components.GoalChip
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
 import xyz.jishnu.health.ui.components.IntermCard
@@ -47,6 +50,8 @@ import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.TimeRow
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.DayDetailViewModel
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
@@ -54,6 +59,7 @@ import kotlin.math.abs
 @Composable
 fun DayDetailScreen(
     onBack: () -> Unit,
+    onOpenSession: (Long) -> Unit = {},
     vm: DayDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -127,12 +133,14 @@ fun DayDetailScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Duration", style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500), color = c.ink)
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                if (state.isOngoing) "Live, still running" else "Auto-calculated",
-                                style = IntermTheme.typography.caption,
-                                color = c.muted,
-                            )
+                            if (state.isOngoing) {
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "Live, still running",
+                                    style = IntermTheme.typography.caption,
+                                    color = c.muted,
+                                )
+                            }
                         }
                         Text(
                             "${dh}h ${dm.toString().padStart(2, '0')}m",
@@ -175,6 +183,22 @@ fun DayDetailScreen(
                                     color = c.muted,
                                 )
                             }
+                        }
+                    }
+                }
+
+                if (state.daySessions.size > 1) {
+                    SectionLabel("Fasts on this day")
+                    SettingsCard {
+                        state.daySessions.forEachIndexed { idx, s ->
+                            DaySessionRow(
+                                session = s,
+                                isSelected = s.id == state.sessionId,
+                                goalH = state.goalHours,
+                                nowMs = state.nowMs,
+                                onClick = { onOpenSession(s.id) },
+                                showDivider = idx != state.daySessions.lastIndex,
+                            )
                         }
                     }
                 }
@@ -276,10 +300,14 @@ private fun GoalBar(durationHours: Double, goalH: Int, status: xyz.jishnu.health
         xyz.jishnu.health.data.model.FastStatus.Short -> c.accent
         xyz.jishnu.health.data.model.FastStatus.Ongoing -> c.ink2
     }
-    Box(modifier = Modifier.fillMaxWidth().height(18.dp)) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(18.dp)) {
+    // Stage boundaries (skip 0h start and the 24h endpoint).
+    val stageBoundaryHours = xyz.jishnu.health.data.constants.Stages.all
+        .map { it.startHour }
+        .filter { it in 1..23 }
+    Box(modifier = Modifier.fillMaxWidth().height(36.dp)) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(36.dp)) {
             val w = size.width
-            val barTop = 4f
+            val barTop = 24f
             val barHeight = 8f
             val radius = barHeight / 2f
             drawRoundRect(
@@ -296,12 +324,44 @@ private fun GoalBar(durationHours: Double, goalH: Int, status: xyz.jishnu.health
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius),
                 )
             }
+            // Stage dividers — contrast against whatever's underneath.
+            val fillX = w * fillRatio
+            val dividerWidth = 3f
+            val dividerOverhang = 2f
+            for (h in stageBoundaryHours) {
+                val x = (h / 24f) * w
+                val onFill = x <= fillX
+                val dividerColor = if (onFill) {
+                    c.surface.copy(alpha = 0.85f)
+                } else {
+                    c.ink.copy(alpha = 0.45f)
+                }
+                drawRect(
+                    color = dividerColor,
+                    topLeft = Offset(x - dividerWidth / 2f, barTop - dividerOverhang),
+                    size = Size(dividerWidth, barHeight + dividerOverhang * 2),
+                )
+            }
+            // Goal flag — pole rising above the bar with a triangular pennant.
             val tickX = (w * goalRatio).coerceIn(0f, w - 1f)
+            val poleWidth = 4f
+            val poleTop = 2f
+            val poleBottom = barTop + barHeight + 2f
             drawRect(
-                color = c.ink.copy(alpha = 0.5f),
-                topLeft = Offset(tickX - 0.75f, 2f),
-                size = Size(1.5f, 14f),
+                color = c.ink,
+                topLeft = Offset(tickX - poleWidth / 2f, poleTop),
+                size = Size(poleWidth, poleBottom - poleTop),
             )
+            val flagStart = tickX + poleWidth / 2f
+            val flagWidth = 22f
+            val flagHeight = 18f
+            val flagPath = androidx.compose.ui.graphics.Path().apply {
+                moveTo(flagStart, poleTop)
+                lineTo(flagStart + flagWidth, poleTop + flagHeight / 2f)
+                lineTo(flagStart, poleTop + flagHeight)
+                close()
+            }
+            drawPath(flagPath, color = c.primary)
         }
     }
 }
@@ -322,3 +382,64 @@ private fun StepperButton(icon: androidx.compose.ui.graphics.vector.ImageVector,
 }
 
 private fun Number.em() = androidx.compose.ui.unit.TextUnit(this.toFloat(), androidx.compose.ui.unit.TextUnitType.Em)
+
+@Composable
+private fun DaySessionRow(
+    session: FastingSessionEntity,
+    isSelected: Boolean,
+    goalH: Int,
+    nowMs: Long,
+    onClick: () -> Unit,
+    showDivider: Boolean,
+) {
+    val c = IntermTheme.colors
+    val endMs = session.endMs ?: nowMs
+    val durationMs = (endMs - session.startMs).coerceAtLeast(0L)
+    val durationH = durationMs / 3_600_000.0
+    val h = durationH.toInt()
+    val m = ((durationH - h) * 60).toInt()
+    val status = when {
+        session.endMs == null -> FastStatus.Ongoing
+        durationH >= goalH -> FastStatus.Goal
+        else -> FastStatus.Short
+    }
+    val startTimeText = run {
+        val lt = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault()).toLocalTime()
+        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
+    }
+    val endTimeText = session.endMs?.let { e ->
+        val lt = Instant.ofEpochMilli(e).atZone(ZoneId.systemDefault()).toLocalTime()
+        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
+    }
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier.size(8.dp).clip(CircleShape)
+                    .background(if (isSelected) c.primary else Color.Transparent),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "${h}h ${m}m",
+                        style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
+                        color = c.ink,
+                    )
+                    GoalChip(status = status)
+                }
+                Spacer(Modifier.height(2.dp))
+                val rangeText = if (endTimeText != null) "$startTimeText – $endTimeText" else "From $startTimeText"
+                Text(rangeText, style = IntermTheme.typography.caption, color = c.muted)
+            }
+            Icon(IntermIcons.Chevron, contentDescription = null, tint = c.subtle)
+        }
+        if (showDivider) Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
+    }
+}

@@ -109,8 +109,16 @@ fun IntermNavHost(
                     defaultValue = -1L
                 },
             ),
-        ) {
-            DayDetailScreen(onBack = { navController.popBackStack() })
+        ) { entry ->
+            val dayKey = entry.arguments?.getLong("dayKey") ?: 0L
+            DayDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSession = { sessionId ->
+                    navController.navigate("${Routes.DayDetail}/$dayKey?sessionId=$sessionId") {
+                        popUpTo("${Routes.DayDetail}/{dayKey}?sessionId={sessionId}") { inclusive = true }
+                    }
+                },
+            )
         }
         composable(Routes.Settings) {
             SettingsScreen(

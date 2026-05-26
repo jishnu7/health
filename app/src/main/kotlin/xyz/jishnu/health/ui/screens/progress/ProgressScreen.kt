@@ -131,7 +131,7 @@ fun ProgressScreen(
                             plan = state.plan,
                             units = state.units,
                             isLast = idx == rows.lastIndex,
-                            onClick = { onOpenDay(entry.dayKey, entry.session?.id) },
+                            onClick = { onOpenDay(entry.dayKey, entry.primarySession?.id) },
                         )
                     }
                     if (rows.isEmpty()) {
@@ -334,7 +334,6 @@ private fun LegendItem(color: Color, label: String) {
 private fun SummaryGrid(state: xyz.jishnu.health.vm.ProgressUiState) {
     val c = IntermTheme.colors
     val avgFastFmt = "%.1f".format(Locale.US, state.avgFastHours)
-    val totalFast = state.totalFastHours.toInt()
     val deltaW = WeightMath.fmtWeight(abs(state.weightChangeLb), state.units)
     val startW = state.weightStartLb?.let { WeightMath.fmtWeight(it, state.units) }
     val endW = state.weightEndLb?.let { WeightMath.fmtWeight(it, state.units) }
@@ -348,6 +347,18 @@ private fun SummaryGrid(state: xyz.jishnu.health.vm.ProgressUiState) {
                 StatSub("${state.dayCount}-day average")
             }
             SummaryCard(modifier = Modifier.weight(1f)) {
+                StatHeader("Days goal met")
+                StatValue(value = state.daysGoalMet.toString(), unit = "days")
+                StatSub("of ${state.dayCount} ${if (state.dayCount == 1) "day" else "days"}")
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SummaryCard(modifier = Modifier.weight(1f)) {
+                StatHeader("Streak")
+                StatValue(value = state.streakDays.toString(), unit = "days")
+                StatSub(if (state.streakDays > 0) "Hit goal every day" else "No streak yet")
+            }
+            SummaryCard(modifier = Modifier.weight(1f)) {
                 StatHeader("Weight change")
                 if (state.weightStartLb != null && state.weightEndLb != null) {
                     val sign = if (state.weightChangeLb < 0) "−" else if (state.weightChangeLb > 0) "+" else ""
@@ -357,21 +368,6 @@ private fun SummaryGrid(state: xyz.jishnu.health.vm.ProgressUiState) {
                     StatValue(value = "—", unit = deltaW.unit)
                     StatSub("Need 2+ weigh-ins")
                 }
-            }
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SummaryCard(modifier = Modifier.weight(1f)) {
-                StatHeader("Total fasted")
-                StatValue(value = totalFast.toString(), unit = "hours")
-                val sinceText = state.entries.firstOrNull()?.date
-                    ?.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
-                    ?: "—"
-                StatSub("Since $sinceText")
-            }
-            SummaryCard(modifier = Modifier.weight(1f)) {
-                StatHeader("Streak")
-                StatValue(value = state.streakDays.toString(), unit = "days")
-                StatSub(if (state.streakDays > 0) "Hit goal every day" else "No streak yet")
             }
         }
     }

@@ -54,20 +54,15 @@ fun HistoryRow(
     val hours = entry.fastHours.toInt()
     val mins = ((entry.fastHours - hours) * 60).toInt()
     val status = entry.status(plan.fastHours)
-    val startTimeLabel = entry.session?.let { s ->
+    val startTimeLabel = entry.primarySession?.let { s ->
         val lt = Instant.ofEpochMilli(s.startMs).atZone(ZoneId.systemDefault()).toLocalTime()
-        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
+        "From " + DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
     }
     val weightText = entry.weight?.let { w ->
         val fw = WeightMath.fmtWeight(w.weightLb, units)
         "Weight ${fw.value} ${fw.unit}"
     }
-    val subLabel = when {
-        startTimeLabel != null && weightText != null -> "From $startTimeLabel · $weightText"
-        startTimeLabel != null -> "From $startTimeLabel"
-        weightText != null -> weightText
-        else -> "No data"
-    }
+    val subLabel = listOfNotNull(startTimeLabel, weightText).joinToString(" · ").ifEmpty { "No data" }
 
     Column(modifier = modifier) {
         Row(

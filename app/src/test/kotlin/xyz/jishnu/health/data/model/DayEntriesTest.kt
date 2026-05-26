@@ -3,6 +3,7 @@ package xyz.jishnu.health.data.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.local.WeightEntryEntity
@@ -28,10 +29,9 @@ class DayEntriesTest {
 
         val merged = DayEntries.merge(listOf(s1, s2), listOf(w1, w2), utc)
         assertEquals(2, merged.size)
-        // Most recent first
         assertEquals(day(2026, 5, 25), merged[0].dayKey)
         assertEquals(day(2026, 5, 24), merged[1].dayKey)
-        assertNotNull(merged[0].session)
+        assertEquals(1, merged[0].sessions.size)
         assertNotNull(merged[0].weight)
     }
 
@@ -39,14 +39,25 @@ class DayEntriesTest {
         val w = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 25), weightLb = 180.0, createdMs = 0)
         val merged = DayEntries.merge(emptyList(), listOf(w), utc)
         assertEquals(1, merged.size)
-        assertNull(merged[0].session)
+        assertTrue(merged[0].sessions.isEmpty())
         assertNotNull(merged[0].weight)
         assertEquals(0.0, merged[0].fastHours, 0.0)
     }
 
-    @Test fun `fastHours computes from start and end`() {
+    @Test fun `fastHours is longest single session for the day`() {
+        val short = FastingSessionEntity(id = 1, startMs = day(2026, 5, 25) + 0, endMs = day(2026, 5, 25) + 5 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val long = FastingSessionEntity(id = 2, startMs = day(2026, 5, 25) + 6 * 3_600_000L, endMs = day(2026, 5, 25) + 22 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val merged = DayEntries.merge(listOf(short, long), emptyList(), utc)
+        assertEquals(1, merged.size)
+        assertEquals(16.0, merged[0].fastHours, 0.0001)
+        assertEquals(21.0, merged[0].totalFastHours, 0.0001)
+        assertEquals(2, merged[0].sessionCount)
+    }
+
+    @Test fun `single completed session`() {
         val s = FastingSessionEntity(id = 1, startMs = 0, endMs = 16 * 3_600_000L, goalHours = 16, planId = "16:8")
         val merged = DayEntries.merge(listOf(s), emptyList(), utc)
         assertEquals(16.0, merged[0].fastHours, 0.0001)
+        assertNull(merged[0].weight)
     }
 }

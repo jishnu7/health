@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
@@ -38,6 +39,7 @@ data class DayDetailUiState(
     val isOngoing: Boolean = false,
     val nowMs: Long = System.currentTimeMillis(),
     val zone: ZoneId = ZoneId.systemDefault(),
+    val daySessions: List<FastingSessionEntity> = emptyList(),
 ) {
     private val startInstantMs: Long
         get() = date.atTime(TimeMath.parseTime(startTime)).atZone(zone).toInstant().toEpochMilli()
@@ -93,10 +95,11 @@ class DayDetailViewModel @Inject constructor(
         val dayStart = dayKey
         val dayEnd = dayKey + 86_400_000L
         val sessions = fastingRepo.sessionsInRange(dayStart, dayEnd).first()
-        // Prefer the explicitly-navigated session; otherwise fall back to ongoing > most-recent.
+            .sortedByDescending { it.startMs }
+        // Prefer the explicitly-navigated session; otherwise fall back to ongoing > longest.
         val session = targetSessionId?.let { id -> sessions.firstOrNull { it.id == id } }
             ?: sessions.firstOrNull { it.endMs == null }
-            ?: sessions.maxByOrNull { it.startMs }
+            ?: sessions.maxByOrNull { (it.endMs ?: System.currentTimeMillis()) - it.startMs }
         val weight = weightRepo.findByDay(dayKey)
 
         val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightLb
@@ -138,6 +141,7 @@ class DayDetailViewModel @Inject constructor(
             isOngoing = isOngoing,
             nowMs = System.currentTimeMillis(),
             zone = zone,
+            daySessions = sessions,
         )
     }
 

@@ -28,11 +28,11 @@ data class ProgressUiState(
     val plan: Plan = Plans.default,
     val units: Units = Units.Metric,
     val avgFastHours: Double = 0.0,
-    val totalFastHours: Double = 0.0,
     val weightStartLb: Double? = null,
     val weightEndLb: Double? = null,
     val weightChangeLb: Double = 0.0,
     val streakDays: Int = 0,
+    val daysGoalMet: Int = 0,
     val dayCount: Int = 0,
 )
 
@@ -60,12 +60,13 @@ class ProgressViewModel @Inject constructor(
             .filter { it.date >= from && it.date <= to }
             .sortedBy { it.dayKey }
 
-        val totalFast = merged.sumOf { it.fastHours }
-        val avgFast = if (merged.isEmpty()) 0.0 else totalFast / merged.size
         val firstWeight = merged.firstOrNull { it.weight != null }?.weight?.weightLb
         val lastWeight = merged.lastOrNull { it.weight != null }?.weight?.weightLb
         val change = if (firstWeight != null && lastWeight != null) lastWeight - firstWeight else 0.0
         val streak = computeStreak(merged, plan.fastHours)
+        val daysGoalMet = merged.count { it.fastHours >= plan.fastHours }
+        // Mean of each day's longest fast — same metric the chart plots.
+        val avgFast = if (merged.isEmpty()) 0.0 else merged.sumOf { it.fastHours } / merged.size
 
         ProgressUiState(
             range = range,
@@ -73,11 +74,11 @@ class ProgressViewModel @Inject constructor(
             plan = plan,
             units = settings.units,
             avgFastHours = avgFast,
-            totalFastHours = totalFast,
             weightStartLb = firstWeight,
             weightEndLb = lastWeight,
             weightChangeLb = change,
             streakDays = streak,
+            daysGoalMet = daysGoalMet,
             dayCount = merged.size,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())

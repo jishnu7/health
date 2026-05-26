@@ -6,25 +6,44 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+/**
+ * One per calendar day. Aggregates every fasting session that started on that day
+ * (so the History list and chart show a single row/point per date), plus that day's
+ * weight entry. Underlying multi-session data is preserved — DayDetail can still
+ * navigate to a specific session via `sessionId`.
+ */
 data class DayEntry(
     val dayKey: Long,
     val date: LocalDate,
-    val session: FastingSessionEntity?,
+    val sessions: List<FastingSessionEntity>,
     val weight: WeightEntryEntity?,
     val nowMs: Long = System.currentTimeMillis(),
 ) {
-    val isOngoing: Boolean = session != null && session.endMs == null
-    val fastHours: Double = session?.let {
-        val end = it.endMs ?: nowMs
-        ((end - it.startMs).coerceAtLeast(0L)) / 3_600_000.0
-    } ?: 0.0
+    val ongoingSession: FastingSessionEntity? = sessions.firstOrNull { it.endMs == null }
+    val isOngoing: Boolean = ongoingSession != null
+
+    /** The session to open by default when the user taps the row: ongoing first, else the longest. */
+    val primarySession: FastingSessionEntity? = ongoingSession
+        ?: sessions.maxByOrNull { (it.endMs ?: nowMs) - it.startMs }
+
+    /** Longest single session for the day — used as the headline duration in History and as the chart's Y value. */
+    val fastHours: Double = sessions.maxOfOrNull { s -> sessionHours(s) } ?: 0.0
+
+    /** Sum across every session for the day — used for the "Total fasted" stat. */
+    val totalFastHours: Double = sessions.sumOf { s -> sessionHours(s) }
+
+    val sessionCount: Int = sessions.size
+
+    private fun sessionHours(s: FastingSessionEntity): Double {
+        val end = s.endMs ?: nowMs
+        return ((end - s.startMs).coerceAtLeast(0L)) / 3_600_000.0
+    }
 }
 
 object DayEntries {
     /**
      * Threshold (in hours) below which the "I ate" action discards the active session.
-     * History always shows everything that's actually persisted — this constant is only
-     * consulted when ending a fast early via "I ate".
+     * History always shows everything that's actually persisted.
      */
     const val MIN_QUALIFYING_HOURS = 4
 
@@ -34,13 +53,9 @@ object DayEntries {
     }
 
     /**
-     * Build a flat history list, one [DayEntry] per session, plus weight-only rows for
-     * days with a weigh-in but no session. No duration filtering — whatever's in the DB
-     * shows up. Sessions on the same day produce multiple rows.
-     *
-     * Sort: most-recent session first; weight-only rows sort by dayKey desc.
-     * Weight attaches to the most-recent session of its day; weight-only days get
-     * their own row with [DayEntry.session] = null.
+     * Build a per-day history list. Every session that started on a given local day
+     * is grouped into a single [DayEntry] for that day, sorted most-recent first.
+     * Days with only a weight entry get a session-less [DayEntry].
      */
     fun merge(
         sessions: List<FastingSessionEntity>,
@@ -51,36 +66,22 @@ object DayEntries {
         val weightByKey = weights.associateBy { it.dayKey }
         val sessionsByKey = sessions.groupBy { dayKeyFor(it.startMs, zone) }
 
-        val allKeys = (sessionsByKey.keys + weightByKey.keys).toSortedSet(compareByDescending { it })
+        val allKeys = (sessionsByKey.keys + weightByKey.keys)
+            .toSortedSet(compareByDescending { it })
         val entries = mutableListOf<DayEntry>()
 
         for (key in allKeys) {
-            val daySessions = sessionsByKey[key]?.sortedByDescending { it.startMs } ?: emptyList()
+            val daySessions = (sessionsByKey[key] ?: emptyList())
+                .sortedByDescending { it.startMs }
             val weight = weightByKey[key]
-            val date = Instant.ofEpochMilli(key).atZone(zone).toLocalDate()
-
-            if (daySessions.isEmpty()) {
-                if (weight != null) {
-                    entries += DayEntry(
-                        dayKey = key,
-                        date = date,
-                        session = null,
-                        weight = weight,
-                        nowMs = nowMs,
-                    )
-                }
-            } else {
-                daySessions.forEachIndexed { idx, session ->
-                    entries += DayEntry(
-                        dayKey = key,
-                        date = date,
-                        session = session,
-                        // Weight attaches to the most-recent session of the day only.
-                        weight = if (idx == 0) weight else null,
-                        nowMs = nowMs,
-                    )
-                }
-            }
+            if (daySessions.isEmpty() && weight == null) continue
+            entries += DayEntry(
+                dayKey = key,
+                date = Instant.ofEpochMilli(key).atZone(zone).toLocalDate(),
+                sessions = daySessions,
+                weight = weight,
+                nowMs = nowMs,
+            )
         }
         return entries
     }
