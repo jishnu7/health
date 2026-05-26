@@ -12,13 +12,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import xyz.jishnu.health.data.local.Settings
 import xyz.jishnu.health.data.model.Units
+import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
+import xyz.jishnu.health.notifications.FastingForegroundService
 import xyz.jishnu.health.notifications.ReminderScheduler
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
+    private val fastingRepo: FastingRepository,
     private val scheduler: ReminderScheduler,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
@@ -44,7 +47,18 @@ class SettingsViewModel @Inject constructor(
         repo.setWaterReminderOn(on)
         scheduler.syncFromSettings(appContext, repo.settings.first())
     }
-    fun setStickyNotificationOn(on: Boolean) = viewModelScope.launch { repo.setStickyNotificationOn(on) }
+    fun setStickyNotificationOn(on: Boolean) = viewModelScope.launch {
+        repo.setStickyNotificationOn(on)
+        // Sync the foreground service immediately so the live-update
+        // notification disappears as soon as the toggle goes off (and comes
+        // back if it's flipped on again during an active fast).
+        val active = fastingRepo.activeSession.first()
+        if (on) {
+            if (active != null) FastingForegroundService.start(appContext)
+        } else {
+            FastingForegroundService.stop(appContext)
+        }
+    }
     fun setFastStartTime(hhmm: String) = viewModelScope.launch {
         repo.setFastStartTime(hhmm)
         scheduler.syncFromSettings(appContext, repo.settings.first())
