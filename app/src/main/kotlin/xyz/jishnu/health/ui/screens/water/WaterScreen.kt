@@ -447,7 +447,7 @@ private fun PresetButton(
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
     ) {
         BottleIcon(height = bottleHeight, widthDp = bottleWidth)
         Text(
