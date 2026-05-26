@@ -6,13 +6,14 @@ PACKAGE = xyz.jishnu.health.dev
 ACTIVITY = $(PACKAGE)/xyz.jishnu.health.MainActivity
 ADB = ~/Library/Android/sdk/platform-tools/adb
 
-.PHONY: build install run clean clear-data test lint uninstall logcat devices apk help
+.PHONY: build install run clean clear-data test lint uninstall logcat devices apk bundle help
 
 help:
 	@echo "Targets:"
 	@echo "  build      assembleDebug (produces $(APK))"
 	@echo "  install    installDebug on the connected device/emulator"
 	@echo "  run        install + launch MainActivity"
+	@echo "  bundle     bundleRelease — signed AAB for Play upload"
 	@echo "  uninstall  remove the app from the device"
 	@echo "  clear-data wipe app storage (Room DB, DataStore, prefs) via pm clear"
 	@echo "  clean      ./gradlew clean"
@@ -54,3 +55,7 @@ devices:
 
 apk:
 	@echo $(CURDIR)/$(APK)
+
+bundle:
+	$(GRADLE) :app:bundleRelease
+	@echo "AAB → $(CURDIR)/app/build/outputs/bundle/release/app-release.aab"

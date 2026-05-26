@@ -1,9 +1,25 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+// Release signing reads from a gitignored keystore.properties next to this
+// module. Layout:
+//   storeFile=/absolute/path/to/upload-keystore.jks
+//   storePassword=...
+//   keyAlias=interm-upload
+//   keyPassword=...
+// If the file is absent we still let `:app:assembleRelease` configure (handy
+// for CI lint / library consumers); only `bundleRelease` will fail at the sign
+// step.
+val keystoreProperties: Properties = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -19,6 +35,16 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = keystoreProperties.getProperty("storeFile")
+            if (!storePath.isNullOrBlank()) storeFile = file(storePath)
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         debug {
             // The dev variant installs alongside the production build with a
@@ -29,8 +55,19 @@ android {
             resValue("string", "app_name", "Interm Dev")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             resValue("string", "app_name", "Interm")
+            // Only attach the signing config if a keystore is actually
+            // configured; otherwise an unsigned release APK is built and the
+            // user is reminded what's missing on bundle.
+            if (keystoreProperties.getProperty("storeFile")?.isNotBlank() == true) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
