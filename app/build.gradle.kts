@@ -20,8 +20,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The dev variant installs alongside the production build with a
+            // distinct package + label, and is the only one that seeds demo data
+            // (gated by BuildConfig.DEBUG in IntermApplication).
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Interm Dev")
+        }
         release {
             isMinifyEnabled = false
+            resValue("string", "app_name", "Interm")
         }
     }
 

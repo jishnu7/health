@@ -1,8 +1,9 @@
 JAVA_HOME := /Applications/Android Studio.app/Contents/jbr/Contents/Home
 GRADLE = JAVA_HOME="$(JAVA_HOME)" ./gradlew
 APK = app/build/outputs/apk/debug/app-debug.apk
-PACKAGE = xyz.jishnu.health
-ACTIVITY = $(PACKAGE)/.MainActivity
+# Debug builds install with .dev suffix so the dev app sits alongside production.
+PACKAGE = xyz.jishnu.health.dev
+ACTIVITY = $(PACKAGE)/xyz.jishnu.health.MainActivity
 ADB = ~/Library/Android/sdk/platform-tools/adb
 
 .PHONY: build install run clean clear-data test lint uninstall logcat devices apk help
