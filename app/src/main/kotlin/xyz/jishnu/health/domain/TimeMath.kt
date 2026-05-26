@@ -61,14 +61,21 @@ object TimeMath {
 }
 
 object WeightMath {
-    private const val LB_TO_KG = 0.45359237
-    fun lbToKg(lb: Double): Double = lb * LB_TO_KG
-    fun kgToLb(kg: Double): Double = kg / LB_TO_KG
+    private const val KG_PER_LB = 0.45359237
+    fun lbToKg(lb: Double): Double = lb * KG_PER_LB
+    fun kgToLb(kg: Double): Double = kg / KG_PER_LB
 
     data class FormattedWeight(val value: String, val unit: String)
 
-    fun fmtWeight(lb: Double, units: Units): FormattedWeight = when (units) {
-        Units.Metric -> FormattedWeight("%.1f".format(Locale.US, lbToKg(lb)), "kg")
-        Units.Imperial -> FormattedWeight("%.1f".format(Locale.US, lb), "lb")
+    /** Storage is always kg; this formats it for the requested display unit. */
+    fun fmtWeight(weightKg: Double, units: Units): FormattedWeight = when (units) {
+        Units.Metric -> FormattedWeight("%.1f".format(Locale.US, weightKg), "kg")
+        Units.Imperial -> FormattedWeight("%.1f".format(Locale.US, kgToLb(weightKg)), "lb")
+    }
+
+    /** Convert a delta expressed in the user's currently-displayed unit into kg. */
+    fun deltaToKg(deltaInDisplayUnit: Double, units: Units): Double = when (units) {
+        Units.Metric -> deltaInDisplayUnit
+        Units.Imperial -> lbToKg(deltaInDisplayUnit)
     }
 }

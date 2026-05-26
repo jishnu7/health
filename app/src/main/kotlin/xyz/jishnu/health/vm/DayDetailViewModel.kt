@@ -29,8 +29,8 @@ data class DayDetailUiState(
     val date: LocalDate = LocalDate.now(),
     val startTime: String = "20:00",
     val endTime: String? = "12:00",
-    val weightLb: Double = 150.0,
-    val previousWeightLb: Double? = null,
+    val weightKg: Double = 70.0,
+    val previousWeightKg: Double? = null,
     val notes: String = "",
     val units: Units = Units.Metric,
     val goalHours: Int = 16,
@@ -102,7 +102,7 @@ class DayDetailViewModel @Inject constructor(
             ?: sessions.maxByOrNull { (it.endMs ?: System.currentTimeMillis()) - it.startMs }
         val weight = weightRepo.findByDay(dayKey)
 
-        val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightLb
+        val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightKg
 
         val startStr: String
         val endStr: String?
@@ -131,8 +131,8 @@ class DayDetailViewModel @Inject constructor(
             date = date,
             startTime = startStr,
             endTime = endStr,
-            weightLb = weight?.weightLb ?: previousWeight ?: 150.0,
-            previousWeightLb = previousWeight,
+            weightKg = weight?.weightKg ?: previousWeight ?: 70.0,
+            previousWeightKg = previousWeight,
             notes = weight?.notes ?: session?.note ?: "",
             units = settings.units,
             goalHours = session?.goalHours ?: plan.fastHours,
@@ -152,8 +152,8 @@ class DayDetailViewModel @Inject constructor(
     }
 
     fun setNotes(value: String) { _state.update { it.copy(notes = value) } }
-    fun setWeightLb(lb: Double) { _state.update { it.copy(weightLb = lb) } }
-    fun bumpWeight(deltaLb: Double) { _state.update { it.copy(weightLb = it.weightLb + deltaLb) } }
+    fun setWeightKg(kg: Double) { _state.update { it.copy(weightKg = kg) } }
+    fun bumpWeightKg(deltaKg: Double) { _state.update { it.copy(weightKg = it.weightKg + deltaKg) } }
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
@@ -185,7 +185,7 @@ class DayDetailViewModel @Inject constructor(
                 inserted?.let { fastingRepo.updateSession(it.copy(endMs = endInstant, note = s.notes.ifBlank { null })) }
             }
         }
-        weightRepo.upsertForDay(s.dayKey, s.weightLb, s.notes.ifBlank { null })
+        weightRepo.upsertForDay(s.dayKey, s.weightKg, s.notes.ifBlank { null })
         onDone()
     }
 

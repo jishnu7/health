@@ -24,8 +24,8 @@ class DayEntriesTest {
     @Test fun `merge groups by day and sorts desc`() {
         val s1 = FastingSessionEntity(id = 1, startMs = day(2026, 5, 24) + 20 * 3_600_000L, endMs = day(2026, 5, 25) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
         val s2 = FastingSessionEntity(id = 2, startMs = day(2026, 5, 25) + 20 * 3_600_000L, endMs = null, goalHours = 16, planId = "16:8")
-        val w1 = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 24), weightLb = 178.0, createdMs = 0)
-        val w2 = WeightEntryEntity(id = 2, dayKey = day(2026, 5, 25), weightLb = 177.8, createdMs = 0)
+        val w1 = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 24), weightKg =178.0, createdMs = 0)
+        val w2 = WeightEntryEntity(id = 2, dayKey = day(2026, 5, 25), weightKg =177.8, createdMs = 0)
 
         val merged = DayEntries.merge(listOf(s1, s2), listOf(w1, w2), utc)
         assertEquals(2, merged.size)
@@ -36,7 +36,7 @@ class DayEntriesTest {
     }
 
     @Test fun `merge handles day with only weight`() {
-        val w = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 25), weightLb = 180.0, createdMs = 0)
+        val w = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 25), weightKg =180.0, createdMs = 0)
         val merged = DayEntries.merge(emptyList(), listOf(w), utc)
         assertEquals(1, merged.size)
         assertTrue(merged[0].sessions.isEmpty())

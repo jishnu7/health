@@ -57,13 +57,16 @@ fun WeightScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
-    val draftLb = state.draftLb ?: state.previous?.weightLb ?: 150.0
-    val wf = WeightMath.fmtWeight(draftLb, state.units)
-    val prevLb = state.previous?.weightLb
-    val trend = prevLb?.let { draftLb - it } ?: 0.0
-    val trendW = WeightMath.fmtWeight(abs(trend), state.units)
-    val avgLb = state.sevenDayAverageLb
-    val avgW = avgLb?.let { WeightMath.fmtWeight(it, state.units) }
+    val draftKg = state.draftKg ?: state.previous?.weightKg ?: 70.0
+    val wf = WeightMath.fmtWeight(draftKg, state.units)
+    val prevKg = state.previous?.weightKg
+    val trendKg = prevKg?.let { draftKg - it } ?: 0.0
+    val trendW = WeightMath.fmtWeight(abs(trendKg), state.units)
+    val avgKg = state.sevenDayAverageKg
+    val avgW = avgKg?.let { WeightMath.fmtWeight(it, state.units) }
+    // Stepper / quick-delta values are expressed in the user's displayed unit
+    // (kg in metric, lb in imperial) and converted to kg before persisting.
+    val smallStepKg = WeightMath.deltaToKg(0.1, state.units)
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -98,17 +101,19 @@ fun WeightScreen(
                         StepperRow(
                             value = wf.value,
                             unit = wf.unit,
-                            onMinus = { vm.bumpDraft(-0.1) },
-                            onPlus = { vm.bumpDraft(0.1) },
+                            onMinus = { vm.bumpDraftKg(-smallStepKg) },
+                            onPlus = { vm.bumpDraftKg(smallStepKg) },
                         )
                         Spacer(Modifier.height(18.dp))
-                        QuickDeltaRow(units = state.units, onDelta = vm::bumpDraft)
+                        QuickDeltaRow(units = state.units, onDelta = { displayDelta ->
+                            vm.bumpDraftKg(WeightMath.deltaToKg(displayDelta, state.units))
+                        })
                         Spacer(Modifier.height(22.dp))
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(c.border))
                         Spacer(Modifier.height(16.dp))
                         SummaryRow(
-                            prev = prevLb?.let { WeightMath.fmtWeight(it, state.units) },
-                            trend = trend,
+                            prev = prevKg?.let { WeightMath.fmtWeight(it, state.units) },
+                            trend = trendKg,
                             trendValue = trendW,
                             avg = avgW,
                         )
@@ -186,6 +191,10 @@ private fun StepperButton(icon: androidx.compose.ui.graphics.vector.ImageVector,
     }
 }
 
+/**
+ * Quick-delta pill row. Deltas are emitted in the **displayed unit** — callers convert
+ * to kg before writing. So +1 in metric mode means +1 kg; +1 in imperial means +1 lb.
+ */
 @Composable
 private fun QuickDeltaRow(units: Units, onDelta: (Double) -> Unit) {
     val c = IntermTheme.colors
@@ -201,7 +210,7 @@ private fun QuickDeltaRow(units: Units, onDelta: (Double) -> Unit) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
-                    .clickable { onDelta(if (units == Units.Metric) d * 0.45359237 else d) }
+                    .clickable { onDelta(d) }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {

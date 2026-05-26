@@ -43,7 +43,8 @@ class MockSeeder @Inject constructor(
             val dayKey = todayKey - i * 86_400_000L
             val baseFast = 15.0 + sin(i / 2.0) * 2.0 + rnd() * 1.5
             val fastHours = max(0.0, baseFast)
-            val weightLb = 178.4 - i * 0.18 + (rnd() - 0.5) * 1.2
+            // Storage is metric (kg) — seed around 80 kg with small daily drift.
+            val weightKg = 80.9 - i * 0.08 + (rnd() - 0.5) * 0.5
 
             val startMs = dayKey + 8 * 3_600_000L
             val endMs = startMs + (fastHours * 3_600_000.0).toLong()
@@ -58,7 +59,7 @@ class MockSeeder @Inject constructor(
             weightDao.insert(
                 WeightEntryEntity(
                     dayKey = dayKey,
-                    weightLb = weightLb,
+                    weightKg = weightKg,
                     createdMs = startMs,
                 )
             )

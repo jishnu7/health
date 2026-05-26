@@ -30,7 +30,9 @@ object DataModule {
 
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): IntermDatabase =
-        Room.databaseBuilder(ctx, IntermDatabase::class.java, "interm.db").build()
+        Room.databaseBuilder(ctx, IntermDatabase::class.java, "interm.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides fun provideFastingSessionDao(db: IntermDatabase): FastingSessionDao = db.fastingSessionDao()
     @Provides fun provideWeightEntryDao(db: IntermDatabase): WeightEntryDao = db.weightEntryDao()

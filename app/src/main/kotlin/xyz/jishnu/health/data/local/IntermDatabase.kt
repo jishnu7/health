@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [FastingSessionEntity::class, WeightEntryEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class IntermDatabase : RoomDatabase() {

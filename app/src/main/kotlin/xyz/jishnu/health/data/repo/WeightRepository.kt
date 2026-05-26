@@ -10,6 +10,6 @@ interface WeightRepository {
     fun entriesInRange(fromMs: Long, toMs: Long): Flow<List<WeightEntryEntity>>
 
     suspend fun findByDay(dayKey: Long): WeightEntryEntity?
-    suspend fun upsertForDay(dayKey: Long, weightLb: Double, notes: String? = null)
+    suspend fun upsertForDay(dayKey: Long, weightKg: Double, notes: String? = null)
     suspend fun delete(entry: WeightEntryEntity)
 }

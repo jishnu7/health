@@ -60,8 +60,8 @@ class ProgressViewModel @Inject constructor(
             .filter { it.date >= from && it.date <= to }
             .sortedBy { it.dayKey }
 
-        val firstWeight = merged.firstOrNull { it.weight != null }?.weight?.weightLb
-        val lastWeight = merged.lastOrNull { it.weight != null }?.weight?.weightLb
+        val firstWeight = merged.firstOrNull { it.weight != null }?.weight?.weightKg
+        val lastWeight = merged.lastOrNull { it.weight != null }?.weight?.weightKg
         val change = if (firstWeight != null && lastWeight != null) lastWeight - firstWeight else 0.0
         val streak = computeStreak(merged, plan.fastHours)
         val daysGoalMet = merged.count { it.fastHours >= plan.fastHours }

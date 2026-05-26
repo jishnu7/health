@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class WeightEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val dayKey: Long,
-    val weightLb: Double,
+    val weightKg: Double,
     val notes: String? = null,
     val createdMs: Long,
 )

@@ -35,7 +35,7 @@ fun FastChart(
 ) {
     val c = IntermTheme.colors
     val data = entries.sortedBy { it.dayKey }
-    val weights = data.mapNotNull { it.weight?.weightLb }
+    val weights = data.mapNotNull { it.weight?.weightKg }
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
@@ -43,10 +43,8 @@ fun FastChart(
     val rightTickStyle = tickStyle
     val xLabelStyle = tickStyle.copy(fontWeight = FontWeight.W400)
 
-    val wMinLb = if (weights.isEmpty()) 150.0 else floor(weights.min() - 1.0)
-    val wMaxLb = if (weights.isEmpty()) 200.0 else ceil(weights.max() + 1.0)
-    val wMinDisplay = if (units == Units.Metric) WeightMath.lbToKg(wMinLb) else wMinLb
-    val wMaxDisplay = if (units == Units.Metric) WeightMath.lbToKg(wMaxLb) else wMaxLb
+    val wMinKg = if (weights.isEmpty()) 60.0 else floor(weights.min() - 0.5)
+    val wMaxKg = if (weights.isEmpty()) 100.0 else ceil(weights.max() + 0.5)
 
     Canvas(modifier = modifier.fillMaxWidth().height(220.dp)) {
         val w = size.width
@@ -66,8 +64,8 @@ fun FastChart(
         fun xAt(i: Int): Float = if (data.size <= 1) innerLeft + innerW / 2f
         else innerLeft + (i.toFloat() / (data.size - 1)) * innerW
 
-        fun wY(weightLb: Double): Float {
-            val ratio = ((weightLb - wMinLb) / (wMaxLb - wMinLb)).coerceIn(0.0, 1.0)
+        fun wY(weightKg: Double): Float {
+            val ratio = ((weightKg - wMinKg) / (wMaxKg - wMinKg)).coerceIn(0.0, 1.0)
             return innerTop + (1f - ratio.toFloat()) * innerH
         }
 
@@ -79,8 +77,8 @@ fun FastChart(
         // Horizontal gridlines for weight axis (5 ticks)
         val ticks = 4
         for (i in 0..ticks) {
-            val v = wMinLb + (wMaxLb - wMinLb) * (i.toFloat() / ticks)
-            val y = wY(v)
+            val vKg = wMinKg + (wMaxKg - wMinKg) * (i.toFloat() / ticks)
+            val y = wY(vKg)
             val dashed = i != 0 && i != ticks
             drawLine(
                 color = grid,
@@ -89,8 +87,7 @@ fun FastChart(
                 strokeWidth = 1f,
                 pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(2f, 4f), 0f) else null,
             )
-            val labelLb = wMinLb + (wMaxLb - wMinLb) * (i.toFloat() / ticks)
-            val labelValue = if (units == Units.Metric) WeightMath.lbToKg(labelLb) else labelLb
+            val labelValue = if (units == Units.Imperial) WeightMath.kgToLb(vKg) else vKg
             val labelText = "${labelValue.toInt()}"
             val measured = measurer.measure(AnnotatedString(labelText), tickStyle)
             drawText(
@@ -138,12 +135,12 @@ fun FastChart(
             }
 
             // Weight line (primary, 2.2dp)
-            val weightPoints = data.mapIndexedNotNull { i, d -> d.weight?.let { i to it.weightLb } }
+            val weightPoints = data.mapIndexedNotNull { i, d -> d.weight?.let { i to it.weightKg } }
             if (weightPoints.isNotEmpty()) {
                 val weightPath = Path().apply {
-                    weightPoints.forEachIndexed { idx, (i, lb) ->
+                    weightPoints.forEachIndexed { idx, (i, kg) ->
                         val x = xAt(i)
-                        val y = wY(lb)
+                        val y = wY(kg)
                         if (idx == 0) moveTo(x, y) else lineTo(x, y)
                     }
                 }
@@ -152,8 +149,8 @@ fun FastChart(
                     color = c.primary,
                     style = Stroke(width = with(density) { 2.2.dp.toPx() }),
                 )
-                weightPoints.forEach { (i, lb) ->
-                    val center = Offset(xAt(i), wY(lb))
+                weightPoints.forEach { (i, kg) ->
+                    val center = Offset(xAt(i), wY(kg))
                     drawCircle(color = c.bg, radius = with(density) { 3.dp.toPx() }, center = center)
                     drawCircle(
                         color = c.primary,

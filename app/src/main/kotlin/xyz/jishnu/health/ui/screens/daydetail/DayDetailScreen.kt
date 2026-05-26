@@ -74,9 +74,10 @@ fun DayDetailScreen(
         state.goalMet -> xyz.jishnu.health.data.model.FastStatus.Goal
         else -> xyz.jishnu.health.data.model.FastStatus.Short
     }
-    val wf = WeightMath.fmtWeight(state.weightLb, state.units)
-    val prevDelta = state.previousWeightLb?.let { state.weightLb - it } ?: 0.0
-    val prevDeltaW = WeightMath.fmtWeight(abs(prevDelta), state.units)
+    val wf = WeightMath.fmtWeight(state.weightKg, state.units)
+    val prevDeltaKg = state.previousWeightKg?.let { state.weightKg - it } ?: 0.0
+    val prevDeltaW = WeightMath.fmtWeight(abs(prevDeltaKg), state.units)
+    val weightStepKg = WeightMath.deltaToKg(0.1, state.units)
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -157,7 +158,7 @@ fun DayDetailScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            StepperButton(IntermIcons.Minus, size = 40) { vm.bumpWeight(-0.1) }
+                            StepperButton(IntermIcons.Minus, size = 40) { vm.bumpWeightKg(-weightStepKg) }
                             Spacer(Modifier.width(14.dp))
                             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.width(130.dp), horizontalArrangement = Arrangement.Center) {
                                 Text(wf.value, style = IntermTheme.typography.hDisplay.copy(fontSize = 40.sp), color = c.ink)
@@ -165,12 +166,12 @@ fun DayDetailScreen(
                                 Text(wf.unit, style = IntermTheme.typography.body.copy(fontSize = 16.sp), color = c.muted, modifier = Modifier.padding(bottom = 6.dp))
                             }
                             Spacer(Modifier.width(14.dp))
-                            StepperButton(IntermIcons.Plus, size = 40) { vm.bumpWeight(0.1) }
+                            StepperButton(IntermIcons.Plus, size = 40) { vm.bumpWeightKg(weightStepKg) }
                         }
-                        if (state.previousWeightLb != null) {
+                        if (state.previousWeightKg != null) {
                             Spacer(Modifier.height(8.dp))
-                            val deltaColor = if (prevDelta < 0) c.primary else if (prevDelta > 0) c.accent else c.muted
-                            val deltaSign = if (prevDelta < 0) "−" else if (prevDelta > 0) "+" else ""
+                            val deltaColor = if (prevDeltaKg < 0) c.primary else if (prevDeltaKg > 0) c.accent else c.muted
+                            val deltaSign = if (prevDeltaKg < 0) "−" else if (prevDeltaKg > 0) "+" else ""
                             Row {
                                 Text(
                                     "$deltaSign${prevDeltaW.value} ${prevDeltaW.unit}",

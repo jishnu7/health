@@ -59,7 +59,7 @@ fun HistoryRow(
         "From " + DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
     }
     val weightText = entry.weight?.let { w ->
-        val fw = WeightMath.fmtWeight(w.weightLb, units)
+        val fw = WeightMath.fmtWeight(w.weightKg, units)
         "Weight ${fw.value} ${fw.unit}"
     }
     val subLabel = listOfNotNull(startTimeLabel, weightText).joinToString(" · ").ifEmpty { "No data" }

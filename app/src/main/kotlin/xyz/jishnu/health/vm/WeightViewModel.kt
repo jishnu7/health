@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import xyz.jishnu.health.data.local.WeightEntryEntity
@@ -21,11 +20,11 @@ import javax.inject.Inject
 data class WeightUiState(
     val units: Units = Units.Metric,
     val previous: WeightEntryEntity? = null,
-    val draftLb: Double? = null,
+    val draftKg: Double? = null,
     val recent: List<WeightEntryEntity> = emptyList(),
 ) {
-    val sevenDayAverageLb: Double? = recent.takeIf { it.isNotEmpty() }
-        ?.let { list -> list.take(7).map { it.weightLb }.average() }
+    val sevenDayAverageKg: Double? = recent.takeIf { it.isNotEmpty() }
+        ?.let { list -> list.take(7).map { it.weightKg }.average() }
 }
 
 @HiltViewModel
@@ -34,18 +33,22 @@ class WeightViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
 ) : ViewModel() {
 
-    private val draftLb = MutableStateFlow<Double?>(null)
+    // Default starting weight when no previous entry exists. 70 kg is a reasonable
+    // mid-range placeholder; the user adjusts from here.
+    private val defaultKg = 70.0
+
+    private val draftKg = MutableStateFlow<Double?>(null)
 
     val state: StateFlow<WeightUiState> = combine(
         repo.recent(7),
         settingsRepo.settings,
-        draftLb.asStateFlow(),
+        draftKg.asStateFlow(),
     ) { recent, settings, draft ->
         val previous = recent.firstOrNull()
         WeightUiState(
             units = settings.units,
             previous = previous,
-            draftLb = draft ?: previous?.weightLb ?: 150.0,
+            draftKg = draft ?: previous?.weightKg ?: defaultKg,
             recent = recent,
         )
     }.stateIn(
@@ -54,15 +57,15 @@ class WeightViewModel @Inject constructor(
         initialValue = WeightUiState(),
     )
 
-    fun setDraft(lb: Double) { draftLb.value = lb }
-    fun bumpDraft(delta: Double) {
-        draftLb.value = (draftLb.value ?: state.value.previous?.weightLb ?: 150.0) + delta
+    fun setDraftKg(kg: Double) { draftKg.value = kg }
+    fun bumpDraftKg(deltaKg: Double) {
+        draftKg.value = (draftKg.value ?: state.value.previous?.weightKg ?: defaultKg) + deltaKg
     }
 
     fun save(notes: String? = null, onSaved: () -> Unit = {}) = viewModelScope.launch {
-        val lb = draftLb.value ?: state.value.previous?.weightLb ?: return@launch
+        val kg = draftKg.value ?: state.value.previous?.weightKg ?: return@launch
         val today = DayEntries.dayKeyFor(System.currentTimeMillis())
-        repo.upsertForDay(today, lb, notes)
+        repo.upsertForDay(today, kg, notes)
         onSaved()
     }
 }
