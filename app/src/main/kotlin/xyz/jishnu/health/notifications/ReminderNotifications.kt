@@ -51,15 +51,13 @@ object ReminderNotifications {
         val remainingFmt = WaterMath.fmtVolume(remaining, units)
         val totalFmt = WaterMath.fmtVolume(totalMl, units)
         val goalFmt = WaterMath.fmtVolume(goalMl, units)
-        val cumPct = WaterReminders.windows.getOrNull(windowIndex)?.cumulativePct ?: 0
         return NotificationCompat.Builder(context, NotifChannels.WATER_REMINDERS)
             .setSmallIcon(R.drawable.ic_notif_fast)
             .setContentTitle("Time to hydrate")
-            .setContentText("${remainingFmt.value} ${remainingFmt.unit} short of your $cumPct% checkpoint.")
+            .setContentText("${remainingFmt.value} ${remainingFmt.unit} short of your checkpoint.")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
-                    "You've had ${totalFmt.value} ${totalFmt.unit} of ${goalFmt.value} ${goalFmt.unit} today. " +
-                        "By now you'd typically be at $cumPct% — grab a glass to catch up.",
+                    "You've had ${totalFmt.value} ${totalFmt.unit} of ${goalFmt.value} ${goalFmt.unit} today — grab a glass to catch up.",
                 ),
             )
             .setAutoCancel(true)
