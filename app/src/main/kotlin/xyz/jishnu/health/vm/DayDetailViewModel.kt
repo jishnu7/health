@@ -65,6 +65,8 @@ class DayDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val dayKey: Long = savedState["dayKey"] ?: System.currentTimeMillis()
+    // -1 (or absent) means "no specific session — load by day"; otherwise load that session.
+    private val targetSessionId: Long? = (savedState["sessionId"] as? Long)?.takeIf { it > 0L }
 
     private val _state = MutableStateFlow(DayDetailUiState(dayKey = dayKey))
     val state: StateFlow<DayDetailUiState> = _state.asStateFlow()
@@ -91,7 +93,10 @@ class DayDetailViewModel @Inject constructor(
         val dayStart = dayKey
         val dayEnd = dayKey + 86_400_000L
         val sessions = fastingRepo.sessionsInRange(dayStart, dayEnd).first()
-        val session = sessions.firstOrNull()
+        // Prefer the explicitly-navigated session; otherwise fall back to ongoing > most-recent.
+        val session = targetSessionId?.let { id -> sessions.firstOrNull { it.id == id } }
+            ?: sessions.firstOrNull { it.endMs == null }
+            ?: sessions.maxByOrNull { it.startMs }
         val weight = weightRepo.findByDay(dayKey)
 
         val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightLb

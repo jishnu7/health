@@ -95,12 +95,20 @@ fun IntermNavHost(
         composable(Routes.Progress) {
             ProgressScreen(
                 onNavigateTab = ::navigateTab,
-                onOpenDay = { dayKey -> navController.navigate("${Routes.DayDetail}/$dayKey") },
+                onOpenDay = { dayKey, sessionId ->
+                    navController.navigate("${Routes.DayDetail}/$dayKey?sessionId=${sessionId ?: -1L}")
+                },
             )
         }
         composable(
-            route = "${Routes.DayDetail}/{dayKey}",
-            arguments = listOf(navArgument("dayKey") { type = NavType.LongType }),
+            route = "${Routes.DayDetail}/{dayKey}?sessionId={sessionId}",
+            arguments = listOf(
+                navArgument("dayKey") { type = NavType.LongType },
+                navArgument("sessionId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
         ) {
             DayDetailScreen(onBack = { navController.popBackStack() })
         }

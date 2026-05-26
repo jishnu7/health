@@ -96,6 +96,7 @@ class FastingViewModel @Inject constructor(
 
     fun endFast() = viewModelScope.launch {
         val active = fastingRepo.activeSession.first() ?: return@launch
+        // End Fast always records, regardless of duration.
         fastingRepo.endFast(active.id, System.currentTimeMillis())
         FastingForegroundService.stop(appContext)
     }
@@ -109,7 +110,7 @@ class FastingViewModel @Inject constructor(
         // that would tear down the foreground service mid-tap and races the
         // Android 14+ "did not call startForeground in time" check on restart.
         fastingRepo.startFast(now, plan.fastHours, plan.id)
-        active?.let { fastingRepo.endFast(it.id, now) }
+        active?.let { fastingRepo.finishOrDiscard(it, now) }
         if (s.stickyNotificationOn) FastingForegroundService.start(appContext)
     }
 

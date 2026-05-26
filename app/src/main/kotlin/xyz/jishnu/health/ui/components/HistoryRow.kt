@@ -35,6 +35,8 @@ import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.data.model.status
 import xyz.jishnu.health.domain.WeightMath
 import xyz.jishnu.health.ui.theme.IntermTheme
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.min
@@ -52,10 +54,20 @@ fun HistoryRow(
     val hours = entry.fastHours.toInt()
     val mins = ((entry.fastHours - hours) * 60).toInt()
     val status = entry.status(plan.fastHours)
-    val weightLabel = entry.weight?.let { w ->
+    val startTimeLabel = entry.session?.let { s ->
+        val lt = Instant.ofEpochMilli(s.startMs).atZone(ZoneId.systemDefault()).toLocalTime()
+        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
+    }
+    val weightText = entry.weight?.let { w ->
         val fw = WeightMath.fmtWeight(w.weightLb, units)
         "Weight ${fw.value} ${fw.unit}"
-    } ?: "No weight logged"
+    }
+    val subLabel = when {
+        startTimeLabel != null && weightText != null -> "From $startTimeLabel · $weightText"
+        startTimeLabel != null -> "From $startTimeLabel"
+        weightText != null -> weightText
+        else -> "No data"
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -89,7 +101,7 @@ fun HistoryRow(
                     GoalChip(status = status)
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(weightLabel, style = IntermTheme.typography.caption, color = c.muted)
+                Text(subLabel, style = IntermTheme.typography.caption, color = c.muted)
             }
             Column(modifier = Modifier.width(70.dp), horizontalAlignment = Alignment.End) {
                 HistoryBar(hours = entry.fastHours, goalH = plan.fastHours, status = status)

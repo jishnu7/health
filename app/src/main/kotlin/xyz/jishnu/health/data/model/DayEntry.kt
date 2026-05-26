@@ -21,50 +21,67 @@ data class DayEntry(
 }
 
 object DayEntries {
+    /**
+     * Threshold (in hours) below which the "I ate" action discards the active session.
+     * History always shows everything that's actually persisted — this constant is only
+     * consulted when ending a fast early via "I ate".
+     */
+    const val MIN_QUALIFYING_HOURS = 4
+
     fun dayKeyFor(epochMs: Long, zone: ZoneId = ZoneId.systemDefault()): Long {
         val local = Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDate()
         return local.atStartOfDay(zone).toInstant().toEpochMilli()
     }
 
+    /**
+     * Build a flat history list, one [DayEntry] per session, plus weight-only rows for
+     * days with a weigh-in but no session. No duration filtering — whatever's in the DB
+     * shows up. Sessions on the same day produce multiple rows.
+     *
+     * Sort: most-recent session first; weight-only rows sort by dayKey desc.
+     * Weight attaches to the most-recent session of its day; weight-only days get
+     * their own row with [DayEntry.session] = null.
+     */
     fun merge(
         sessions: List<FastingSessionEntity>,
         weights: List<WeightEntryEntity>,
         zone: ZoneId = ZoneId.systemDefault(),
         nowMs: Long = System.currentTimeMillis(),
     ): List<DayEntry> {
-        val byKey = sortedMapOf<Long, Pair<FastingSessionEntity?, WeightEntryEntity?>>()
+        val weightByKey = weights.associateBy { it.dayKey }
+        val sessionsByKey = sessions.groupBy { dayKeyFor(it.startMs, zone) }
 
-        sessions.forEach { s ->
-            val key = dayKeyFor(s.startMs, zone)
-            byKey.merge(key, s to null) { existing, incoming ->
-                pickBetterSession(existing.first, incoming.first) to existing.second
+        val allKeys = (sessionsByKey.keys + weightByKey.keys).toSortedSet(compareByDescending { it })
+        val entries = mutableListOf<DayEntry>()
+
+        for (key in allKeys) {
+            val daySessions = sessionsByKey[key]?.sortedByDescending { it.startMs } ?: emptyList()
+            val weight = weightByKey[key]
+            val date = Instant.ofEpochMilli(key).atZone(zone).toLocalDate()
+
+            if (daySessions.isEmpty()) {
+                if (weight != null) {
+                    entries += DayEntry(
+                        dayKey = key,
+                        date = date,
+                        session = null,
+                        weight = weight,
+                        nowMs = nowMs,
+                    )
+                }
+            } else {
+                daySessions.forEachIndexed { idx, session ->
+                    entries += DayEntry(
+                        dayKey = key,
+                        date = date,
+                        session = session,
+                        // Weight attaches to the most-recent session of the day only.
+                        weight = if (idx == 0) weight else null,
+                        nowMs = nowMs,
+                    )
+                }
             }
         }
-        weights.forEach { w ->
-            byKey.merge(w.dayKey, null to w) { a, b -> a.first to (b.second ?: a.second) }
-        }
-
-        return byKey.entries
-            .sortedByDescending { it.key }
-            .map { (key, sw) ->
-                DayEntry(
-                    dayKey = key,
-                    date = Instant.ofEpochMilli(key).atZone(zone).toLocalDate(),
-                    session = sw.first,
-                    weight = sw.second,
-                    nowMs = nowMs,
-                )
-            }
-    }
-
-    private fun pickBetterSession(
-        a: FastingSessionEntity?,
-        b: FastingSessionEntity?,
-    ): FastingSessionEntity? = when {
-        a == null -> b
-        b == null -> a
-        a.endMs == null -> a
-        b.endMs == null -> b
-        else -> if (a.startMs >= b.startMs) a else b
+        return entries
     }
 }

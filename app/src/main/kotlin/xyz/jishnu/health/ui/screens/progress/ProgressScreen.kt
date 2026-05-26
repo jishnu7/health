@@ -66,7 +66,7 @@ import kotlin.math.abs
 @Composable
 fun ProgressScreen(
     onNavigateTab: (NavTab) -> Unit,
-    onOpenDay: (Long) -> Unit,
+    onOpenDay: (dayKey: Long, sessionId: Long?) -> Unit,
     vm: ProgressViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -131,7 +131,7 @@ fun ProgressScreen(
                             plan = state.plan,
                             units = state.units,
                             isLast = idx == rows.lastIndex,
-                            onClick = { onOpenDay(entry.dayKey) },
+                            onClick = { onOpenDay(entry.dayKey, entry.session?.id) },
                         )
                     }
                     if (rows.isEmpty()) {
