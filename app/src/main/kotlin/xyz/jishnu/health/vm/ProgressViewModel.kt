@@ -63,10 +63,13 @@ class ProgressViewModel @Inject constructor(
         val firstWeight = merged.firstOrNull { it.weight != null }?.weight?.weightKg
         val lastWeight = merged.lastOrNull { it.weight != null }?.weight?.weightKg
         val change = if (firstWeight != null && lastWeight != null) lastWeight - firstWeight else 0.0
-        val streak = computeStreak(merged, plan.fastHours)
-        val daysGoalMet = merged.count { it.fastHours >= plan.fastHours }
-        // Mean of each day's longest fast — same metric the chart plots.
-        val avgFast = if (merged.isEmpty()) 0.0 else merged.sumOf { it.fastHours } / merged.size
+        // Exclude today's pre-fast row from fasting summaries so the morning
+        // 0h 0m doesn't poison the average / streak / goal-met counts. The
+        // weight line on the chart and the row itself still render.
+        val fastingDays = merged.filterNot { it.isPreFastToday }
+        val streak = computeStreak(fastingDays, plan.fastHours)
+        val daysGoalMet = fastingDays.count { it.fastHours >= plan.fastHours }
+        val avgFast = if (fastingDays.isEmpty()) 0.0 else fastingDays.sumOf { it.fastHours } / fastingDays.size
 
         ProgressUiState(
             range = range,

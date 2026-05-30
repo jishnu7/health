@@ -22,6 +22,18 @@ data class DayEntry(
     val ongoingSession: FastingSessionEntity? = sessions.firstOrNull { it.endMs == null }
     val isOngoing: Boolean = ongoingSession != null
 
+    /** True when this entry's date is the device's current local date. */
+    val isToday: Boolean = date == LocalDate.now()
+
+    /** True when at least one fasting session exists for the day (ongoing or finished). */
+    val hasFastingActivity: Boolean = sessions.isNotEmpty()
+
+    /**
+     * Today before the user has logged any fast yet renders as 0h 0m, which we want
+     * to suppress from the chart and the SHORT badge — the day isn't over.
+     */
+    val isPreFastToday: Boolean = isToday && !hasFastingActivity
+
     /** The session to open by default when the user taps the row: ongoing first, else the longest. */
     val primarySession: FastingSessionEntity? = ongoingSession
         ?: sessions.maxByOrNull { (it.endMs ?: nowMs) - it.startMs }

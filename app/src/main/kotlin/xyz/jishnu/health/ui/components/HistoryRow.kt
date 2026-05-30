@@ -54,6 +54,7 @@ fun HistoryRow(
     val hours = entry.fastHours.toInt()
     val mins = ((entry.fastHours - hours) * 60).toInt()
     val status = entry.status(plan.fastHours)
+    val showFastReadout = entry.hasFastingActivity
     val startTimeLabel = entry.primarySession?.let { s ->
         val lt = Instant.ofEpochMilli(s.startMs).atZone(ZoneId.systemDefault()).toLocalTime()
         "From " + DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).format(lt)
@@ -89,11 +90,11 @@ fun HistoryRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "${hours}h ${mins}m",
+                        if (showFastReadout) "${hours}h ${mins}m" else "—",
                         style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
-                        color = c.ink,
+                        color = if (showFastReadout) c.ink else c.muted,
                     )
-                    GoalChip(status = status)
+                    if (status != null) GoalChip(status = status)
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(subLabel, style = IntermTheme.typography.caption, color = c.muted)
@@ -136,14 +137,15 @@ fun GoalChip(status: FastStatus, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun HistoryBar(hours: Double, goalH: Int, status: FastStatus, modifier: Modifier = Modifier) {
+fun HistoryBar(hours: Double, goalH: Int, status: FastStatus?, modifier: Modifier = Modifier) {
     val c = IntermTheme.colors
-    val fillRatio = min(1.0, hours / 24.0).toFloat()
+    val fillRatio = if (status == null) 0f else min(1.0, hours / 24.0).toFloat()
     val goalRatio = (goalH / 24f).coerceIn(0f, 1f)
     val fg = when (status) {
         FastStatus.Goal -> c.primary
         FastStatus.Short -> c.accent
         FastStatus.Ongoing -> c.ink2
+        null -> c.subtle
     }
     Canvas(modifier = modifier.size(width = 64.dp, height = 12.dp)) {
         val w = size.width

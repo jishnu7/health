@@ -112,13 +112,17 @@ fun FastChart(
         }
 
         if (data.isNotEmpty()) {
-            // Fasting hours line (accent, 85% opacity)
+            // Fasting hours line (accent, 85% opacity). Skip today before any
+            // fast has been logged — that point would drag the line to 0.
             val accentColor = c.accent.copy(alpha = 0.85f)
+            val fastPoints = data.mapIndexedNotNull { i, d ->
+                if (d.isPreFastToday) null else i to d
+            }
             val fastPath = Path().apply {
-                data.forEachIndexed { i, d ->
+                fastPoints.forEachIndexed { idx, (i, d) ->
                     val x = xAt(i)
                     val y = fY(d.fastHours)
-                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                    if (idx == 0) moveTo(x, y) else lineTo(x, y)
                 }
             }
             drawPath(
@@ -126,7 +130,7 @@ fun FastChart(
                 color = accentColor,
                 style = Stroke(width = with(density) { 1.8.dp.toPx() }),
             )
-            data.forEachIndexed { i, d ->
+            fastPoints.forEach { (i, d) ->
                 drawCircle(
                     color = c.accent,
                     radius = with(density) { 2.5.dp.toPx() },
