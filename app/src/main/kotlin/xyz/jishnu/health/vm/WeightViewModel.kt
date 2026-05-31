@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import xyz.jishnu.health.data.local.WeightEntryEntity
 import xyz.jishnu.health.data.model.DayEntries
+import xyz.jishnu.health.data.model.Sex
 import xyz.jishnu.health.data.model.Units
+import xyz.jishnu.health.data.repo.ProfileRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
 import xyz.jishnu.health.data.repo.WeightRepository
 import javax.inject.Inject
@@ -22,6 +24,8 @@ data class WeightUiState(
     val previous: WeightEntryEntity? = null,
     val draftKg: Double? = null,
     val recent: List<WeightEntryEntity> = emptyList(),
+    val sex: Sex? = null,
+    val heightCm: Double? = null,
 ) {
     val sevenDayAverageKg: Double? = recent.takeIf { it.isNotEmpty() }
         ?.let { list -> list.take(7).map { it.weightKg }.average() }
@@ -31,6 +35,7 @@ data class WeightUiState(
 class WeightViewModel @Inject constructor(
     private val repo: WeightRepository,
     private val settingsRepo: SettingsRepository,
+    private val profileRepo: ProfileRepository,
 ) : ViewModel() {
 
     // Default starting weight when no previous entry exists. 70 kg is a reasonable
@@ -42,14 +47,17 @@ class WeightViewModel @Inject constructor(
     val state: StateFlow<WeightUiState> = combine(
         repo.recent(7),
         settingsRepo.settings,
+        profileRepo.profile,
         draftKg.asStateFlow(),
-    ) { recent, settings, draft ->
+    ) { recent, settings, profile, draft ->
         val previous = recent.firstOrNull()
         WeightUiState(
             units = settings.units,
             previous = previous,
             draftKg = draft ?: previous?.weightKg ?: defaultKg,
             recent = recent,
+            sex = profile.sex,
+            heightCm = profile.heightCm,
         )
     }.stateIn(
         scope = viewModelScope,

@@ -65,7 +65,7 @@ fun OnboardWelcomeScreen(
                 }
             }
 
-            StepDots3(total = 4, currentStep = 1)
+            StepDots3(total = 5, currentStep = 1)
             Spacer(Modifier.height(18.dp))
             IntermButton(onClick = onGetStarted, variant = IntermButtonVariant.Primary, fillWidth = true) {
                 Text("Get Started")

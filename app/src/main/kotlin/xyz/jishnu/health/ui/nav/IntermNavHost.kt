@@ -11,6 +11,7 @@ import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.screens.daydetail.DayDetailScreen
 import xyz.jishnu.health.ui.screens.home.HomeScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardPlanScreen
+import xyz.jishnu.health.ui.screens.onboarding.OnboardProfileScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWaterScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWeightScreen
 import xyz.jishnu.health.ui.screens.onboarding.OnboardWelcomeScreen
@@ -33,6 +34,7 @@ object Routes {
     const val DayDetail = "day-detail"
     const val OnboardWelcome = "onboard-welcome"
     const val OnboardPlan = "onboard-plan"
+    const val OnboardProfile = "onboard-profile"
     const val OnboardWeight = "onboard-weight"
     const val OnboardWater = "onboard-water"
 }
@@ -82,6 +84,12 @@ fun IntermNavHost(
         }
         composable(Routes.OnboardPlan) {
             OnboardPlanScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(Routes.OnboardProfile) },
+            )
+        }
+        composable(Routes.OnboardProfile) {
+            OnboardProfileScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { navController.navigate(Routes.OnboardWeight) },
             )

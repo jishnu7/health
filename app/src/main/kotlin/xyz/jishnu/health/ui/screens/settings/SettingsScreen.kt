@@ -37,7 +37,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import xyz.jishnu.health.BuildConfig
 import xyz.jishnu.health.data.constants.Plans
+import xyz.jishnu.health.data.model.Sex
 import xyz.jishnu.health.notifications.ReminderNotifications
+import xyz.jishnu.health.ui.components.DateOfBirthDialog
+import xyz.jishnu.health.ui.components.HeightDialog
+import xyz.jishnu.health.ui.components.SexSegmented
+import xyz.jishnu.health.ui.components.formatDateOfBirth
+import xyz.jishnu.health.ui.components.formatHeightForDisplay
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.domain.WaterMath
@@ -51,6 +57,7 @@ import xyz.jishnu.health.ui.components.ToggleRow
 import xyz.jishnu.health.ui.components.WaterGoalDialog
 import xyz.jishnu.health.ui.components.rememberNotificationPermissionGranted
 import xyz.jishnu.health.ui.theme.IntermTheme
+import xyz.jishnu.health.vm.ProfileViewModel
 import xyz.jishnu.health.vm.SettingsViewModel
 
 @Composable
@@ -58,8 +65,10 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenPlanPicker: () -> Unit,
     vm: SettingsViewModel = hiltViewModel(),
+    profileVm: ProfileViewModel = hiltViewModel(),
 ) {
     val state by vm.settings.collectAsStateWithLifecycle()
+    val profile by profileVm.profile.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
     val plan = Plans.byId(state.planId)
     val fastEnd = TimeMath.addHoursToTime(state.fastStartTime, plan.fastHours.toDouble())
@@ -91,6 +100,54 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
+                SectionLabel("Profile")
+                SettingsCard {
+                    var showHeight by remember { mutableStateOf(false) }
+                    var showDob by remember { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Text(
+                            "Sex",
+                            modifier = Modifier.weight(1f),
+                            style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W500),
+                            color = c.ink,
+                        )
+                        Box(modifier = Modifier.weight(2f)) {
+                            SexSegmented(sex = profile.sex, onSelect = profileVm::setSex)
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
+                    NavRow(
+                        label = "Height",
+                        trailing = profile.heightCm?.let { formatHeightForDisplay(it, state.units) } ?: "—",
+                        onClick = { showHeight = true },
+                    )
+                    NavRow(
+                        label = "Date of birth",
+                        trailing = profile.dateOfBirth?.let { formatDateOfBirth(it) } ?: "—",
+                        onClick = { showDob = true },
+                        showDivider = false,
+                    )
+                    if (showHeight) {
+                        HeightDialog(
+                            currentCm = profile.heightCm,
+                            units = state.units,
+                            onDismiss = { showHeight = false },
+                            onConfirm = { cm -> profileVm.setHeightCm(cm); showHeight = false },
+                        )
+                    }
+                    if (showDob) {
+                        DateOfBirthDialog(
+                            currentIso = profile.dateOfBirth,
+                            onDismiss = { showDob = false },
+                            onConfirm = { iso -> profileVm.setDateOfBirth(iso); showDob = false },
+                        )
+                    }
+                }
+
                 SectionLabel("Fasting")
                 SettingsCard {
                     NavRow(

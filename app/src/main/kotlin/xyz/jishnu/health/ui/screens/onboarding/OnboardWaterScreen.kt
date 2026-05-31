@@ -136,7 +136,7 @@ fun OnboardWaterScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Column {
-                        Text("STEP 4 OF 4", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                        Text("STEP 5 OF 5", style = IntermTheme.typography.hEyebrow, color = c.muted)
                         Spacer(Modifier.height(8.dp))
                         Text("Set a daily water goal.", style = IntermTheme.typography.hTitle, color = c.ink)
                         Spacer(Modifier.height(8.dp))
@@ -218,7 +218,7 @@ fun OnboardWaterScreen(
                     }
                 }
 
-                StepDots3(total = 4, currentStep = 4)
+                StepDots3(total = 5, currentStep = 5)
                 Spacer(Modifier.height(18.dp))
                 IntermButton(
                     onClick = {
