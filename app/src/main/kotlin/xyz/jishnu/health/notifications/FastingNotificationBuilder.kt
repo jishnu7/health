@@ -141,6 +141,10 @@ object FastingNotificationBuilder {
     private fun openAppPending(context: Context): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            // Always land on the timer ring (Home) — that's the screen the
+            // notification is showing progress for, even if the user was on
+            // another tab when they tapped it.
+            putExtra(MainActivity.EXTRA_OPEN_ROUTE, "home")
         }
         return PendingIntent.getActivity(
             context, 0, intent,

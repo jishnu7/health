@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
 import xyz.jishnu.health.data.repo.WaterRepository
 import xyz.jishnu.health.domain.WaterReminders
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class ReminderReceiver : BroadcastReceiver() {
 
     @Inject lateinit var settingsRepo: SettingsRepository
+    @Inject lateinit var fastingRepo: FastingRepository
     @Inject lateinit var waterRepo: WaterRepository
     @Inject lateinit var scheduler: ReminderScheduler
 
@@ -36,10 +38,15 @@ class ReminderReceiver : BroadcastReceiver() {
                 when (action) {
                     ReminderScheduler.Kind.FastingStart.action -> {
                         if (settings.fastingReminderOn) {
-                            nm?.notify(
-                                NotifChannels.FASTING_REMINDER_NOTIFICATION_ID,
-                                ReminderNotifications.buildFastingReminder(context),
-                            )
+                            // Skip the nudge if a fast is already in progress — no
+                            // point prompting "time to start" when the user is mid-fast.
+                            val alreadyFasting = fastingRepo.activeSession.first() != null
+                            if (!alreadyFasting) {
+                                nm?.notify(
+                                    NotifChannels.FASTING_REMINDER_NOTIFICATION_ID,
+                                    ReminderNotifications.buildFastingReminder(context),
+                                )
+                            }
                             scheduler.scheduleNext(context, ReminderScheduler.Kind.FastingStart, settings.fastStartTime)
                         }
                     }
