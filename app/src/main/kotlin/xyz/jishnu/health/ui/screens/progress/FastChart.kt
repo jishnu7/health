@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import xyz.jishnu.health.data.constants.Stages
 import xyz.jishnu.health.data.model.DayEntry
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.WeightMath
@@ -98,16 +99,66 @@ fun FastChart(
             )
         }
 
-        // Right axis ticks at 0, 8, 16, 24
-        for (v in listOf(0, 8, 16, 24)) {
-            val y = fY(v.toDouble())
-            val labelText = "${v}h"
-            val measured = measurer.measure(AnnotatedString(labelText), rightTickStyle)
+        // Stage boundaries — each metabolic stage gets a faint gridline + a
+        // tick + an hour label on the right axis. Anchor hours (0/8/16/24)
+        // render at the default size; secondary stages (4/12/20) use a
+        // smaller label. 14h is reserved for the dedicated "fast starts"
+        // emphasis line below and is intentionally skipped here.
+        val anchorHours = setOf(0, 8, 16, 24)
+        val fastStartHour = 14
+        val minorStageStyle = rightTickStyle.copy(fontSize = 9.sp)
+        for (h in Stages.all.map { it.startHour }) {
+            if (h == fastStartHour) continue
+            val y = fY(h.toDouble())
+            val isAnchor = h in anchorHours
+            if (h in 1..23) {
+                drawLine(
+                    color = c.accent.copy(alpha = 0.18f),
+                    start = Offset(innerLeft, y),
+                    end = Offset(innerRight, y),
+                    strokeWidth = 1f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 4f), 0f),
+                )
+            }
+            drawLine(
+                color = if (isAnchor) c.muted else c.subtle,
+                start = Offset(innerRight, y),
+                end = Offset(innerRight + if (isAnchor) 5f else 3f, y),
+                strokeWidth = 1f,
+            )
+            val labelText = "${h}h"
+            val style = if (isAnchor) rightTickStyle else minorStageStyle
+            val measured = measurer.measure(AnnotatedString(labelText), style)
             drawText(
                 measurer,
                 labelText,
                 topLeft = Offset(innerRight + 6f, y - measured.size.height / 2f),
-                style = rightTickStyle,
+                style = style,
+            )
+        }
+
+        // 14h — start of the Fat burn stage. Marked with its own line so it
+        // reads more deliberately than a stage boundary, but the tone is dialed
+        // back: thinner stroke, lower alpha, and a softened label color.
+        run {
+            val y = fY(fastStartHour.toDouble())
+            drawLine(
+                color = c.primary.copy(alpha = 0.45f),
+                start = Offset(innerLeft, y),
+                end = Offset(innerRight, y),
+                strokeWidth = 1f,
+            )
+            val labelText = "Fat burn"
+            val style = rightTickStyle.copy(
+                fontSize = 9.sp,
+                color = c.primary.copy(alpha = 0.7f),
+            )
+            val measured = measurer.measure(AnnotatedString(labelText), style)
+            drawText(
+                measurer,
+                labelText,
+                topLeft = Offset(innerRight + 6f, y - measured.size.height / 2f),
+                style = style,
             )
         }
 
