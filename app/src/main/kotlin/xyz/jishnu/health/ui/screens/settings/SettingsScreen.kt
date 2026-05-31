@@ -135,6 +135,7 @@ fun SettingsScreen(
                         HeightDialog(
                             currentCm = profile.heightCm,
                             units = state.units,
+                            sex = profile.sex,
                             onDismiss = { showHeight = false },
                             onConfirm = { cm -> profileVm.setHeightCm(cm); showHeight = false },
                         )

@@ -132,6 +132,7 @@ fun OnboardProfileScreen(
         HeightDialog(
             currentCm = profile.heightCm,
             units = settings.units,
+            sex = profile.sex,
             onDismiss = { showHeight = false },
             onConfirm = { cm -> profileVm.setHeightCm(cm); showHeight = false },
         )
