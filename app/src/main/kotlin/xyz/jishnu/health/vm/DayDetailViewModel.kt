@@ -98,7 +98,14 @@ class DayDetailViewModel @Inject constructor(
 
         val dayStart = dayKey
         val dayEnd = dayKey + 86_400_000L
-        val sessions = fastingRepo.sessionsInRange(dayStart, dayEnd).first()
+        // Sessions "belong" to the day they end on. Ongoing sessions count as
+        // today's day, so include the active session when this is today's row.
+        val ended = fastingRepo.sessionsEndingInRange(dayStart, dayEnd).first()
+        val nowMs = System.currentTimeMillis()
+        val ongoing = fastingRepo.activeSession.first()
+            ?.takeIf { it.endMs == null && nowMs in dayStart until dayEnd }
+        val sessions = (ended + listOfNotNull(ongoing))
+            .distinctBy { it.id }
             .sortedByDescending { it.startMs }
         // Prefer the explicitly-navigated session; otherwise fall back to ongoing > longest.
         val session = targetSessionId?.let { id -> sessions.firstOrNull { it.id == id } }
@@ -174,8 +181,7 @@ class DayDetailViewModel @Inject constructor(
 
         val sessionId = s.sessionId
         if (sessionId != null) {
-            val existing = fastingRepo.sessionsInRange(s.dayKey, s.dayKey + 86_400_000L).first()
-                .firstOrNull { it.id == sessionId }
+            val existing = fastingRepo.sessionById(sessionId)
             if (existing != null) {
                 fastingRepo.updateSession(
                     existing.copy(
@@ -187,8 +193,7 @@ class DayDetailViewModel @Inject constructor(
             }
         } else if (endInstant != null) {
             fastingRepo.startFast(startInstant, s.goalHours, "16:8").also { newId ->
-                val inserted = fastingRepo.sessionsInRange(s.dayKey, s.dayKey + 86_400_000L).first()
-                    .firstOrNull { it.id == newId }
+                val inserted = fastingRepo.sessionById(newId)
                 inserted?.let { fastingRepo.updateSession(it.copy(endMs = endInstant, note = s.notes.ifBlank { null })) }
             }
         }
@@ -199,9 +204,7 @@ class DayDetailViewModel @Inject constructor(
     fun delete(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
         s.sessionId?.let { id ->
-            val existing = fastingRepo.sessionsInRange(s.dayKey, s.dayKey + 86_400_000L).first()
-                .firstOrNull { it.id == id }
-            existing?.let { fastingRepo.deleteSession(it) }
+            fastingRepo.sessionById(id)?.let { fastingRepo.deleteSession(it) }
         }
         s.weightId?.let { id ->
             val existing = weightRepo.findByDay(s.dayKey)

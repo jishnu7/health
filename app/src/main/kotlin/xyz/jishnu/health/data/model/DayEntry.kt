@@ -76,7 +76,13 @@ object DayEntries {
         nowMs: Long = System.currentTimeMillis(),
     ): List<DayEntry> {
         val weightByKey = weights.associateBy { it.dayKey }
-        val sessionsByKey = sessions.groupBy { dayKeyFor(it.startMs, zone) }
+        // Bucket each session by the day it *ends* on (ongoing sessions use
+        // "now" as their effective end). This way an overnight fast that
+        // starts late one evening and ends the next morning lives on the
+        // morning's row, and two distinct fasts on the same calendar day
+        // never collapse into one entry just because they both started that
+        // day.
+        val sessionsByKey = sessions.groupBy { dayKeyFor(it.endMs ?: nowMs, zone) }
 
         val allKeys = (sessionsByKey.keys + weightByKey.keys)
             .toSortedSet(compareByDescending { it })

@@ -14,6 +14,8 @@ class LocalFastingRepository @Inject constructor(
     override val activeSession: Flow<FastingSessionEntity?> = dao.observeActive()
     override val allSessions: Flow<List<FastingSessionEntity>> = dao.observeAll()
     override fun sessionsInRange(fromMs: Long, toMs: Long) = dao.observeRange(fromMs, toMs)
+    override fun sessionsEndingInRange(fromMs: Long, toMs: Long) = dao.observeEndingInRange(fromMs, toMs)
+    override suspend fun sessionById(id: Long) = dao.findById(id)
 
     override suspend fun startFast(startMs: Long, goalHours: Int, planId: String): Long =
         dao.insert(

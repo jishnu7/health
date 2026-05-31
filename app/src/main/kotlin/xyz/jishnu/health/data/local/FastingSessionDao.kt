@@ -30,4 +30,10 @@ interface FastingSessionDao {
 
     @Query("SELECT * FROM fasting_sessions WHERE startMs >= :fromMs AND startMs < :toMs ORDER BY startMs DESC")
     fun observeRange(fromMs: Long, toMs: Long): Flow<List<FastingSessionEntity>>
+
+    @Query("SELECT * FROM fasting_sessions WHERE endMs >= :fromMs AND endMs < :toMs ORDER BY startMs DESC")
+    fun observeEndingInRange(fromMs: Long, toMs: Long): Flow<List<FastingSessionEntity>>
+
+    @Query("SELECT * FROM fasting_sessions WHERE id = :id LIMIT 1")
+    suspend fun findById(id: Long): FastingSessionEntity?
 }

@@ -7,6 +7,9 @@ interface FastingRepository {
     val activeSession: Flow<FastingSessionEntity?>
     val allSessions: Flow<List<FastingSessionEntity>>
     fun sessionsInRange(fromMs: Long, toMs: Long): Flow<List<FastingSessionEntity>>
+    /** Sessions whose [endMs] falls inside the half-open range. Ongoing sessions are excluded. */
+    fun sessionsEndingInRange(fromMs: Long, toMs: Long): Flow<List<FastingSessionEntity>>
+    suspend fun sessionById(id: Long): FastingSessionEntity?
 
     suspend fun startFast(startMs: Long, goalHours: Int, planId: String): Long
     suspend fun endFast(id: Long, endMs: Long)
