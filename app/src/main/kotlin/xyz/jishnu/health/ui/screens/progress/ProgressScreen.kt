@@ -101,7 +101,7 @@ fun ProgressScreen(
                 IntermCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)) {
                     LegendRow(unitsLabel = if (state.units == xyz.jishnu.health.data.model.Units.Metric) "kg" else "lb")
                     Spacer(Modifier.height(8.dp))
-                    FastChart(entries = state.entries, units = state.units)
+                    FastChart(entries = state.entries, units = state.units, goalHours = state.plan.fastHours)
                 }
 
                 Spacer(Modifier.height(14.dp))

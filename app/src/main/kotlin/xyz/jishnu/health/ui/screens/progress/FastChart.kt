@@ -32,6 +32,7 @@ import kotlin.math.floor
 fun FastChart(
     entries: List<DayEntry>,
     units: Units,
+    goalHours: Int,
     modifier: Modifier = Modifier,
 ) {
     val c = IntermTheme.colors
@@ -101,14 +102,18 @@ fun FastChart(
 
         // Stage boundaries — each metabolic stage gets a faint gridline + a
         // tick + an hour label on the right axis. Anchor hours (0/8/16/24)
-        // render at the default size; secondary stages (4/12/20) use a
-        // smaller label. 14h is reserved for the dedicated "fast starts"
-        // emphasis line below and is intentionally skipped here.
+        // render at the default size; secondary stages (4/12/14/20) use a
+        // smaller label. The user's plan goal gets its own emphasised line
+        // (drawn below) and is intentionally skipped here so the two visuals
+        // don't double up at the same y.
         val anchorHours = setOf(0, 8, 16, 24)
-        val fastStartHour = 14
         val minorStageStyle = rightTickStyle.copy(fontSize = 9.sp)
         for (h in Stages.all.map { it.startHour }) {
-            if (h == fastStartHour) continue
+            if (h == goalHours) continue
+            // 14h (Fat burn stage start) used to get its own emphasis line but
+            // we now reserve that visual treatment for the user's goal — skip
+            // the boundary entirely so it doesn't clutter the axis.
+            if (h == 14) continue
             val y = fY(h.toDouble())
             val isAnchor = h in anchorHours
             if (h in 1..23) {
@@ -137,21 +142,21 @@ fun FastChart(
             )
         }
 
-        // 14h — start of the Fat burn stage. Marked with its own line so it
-        // reads more deliberately than a stage boundary, but the tone is dialed
-        // back: thinner stroke, lower alpha, and a softened label color.
-        run {
-            val y = fY(fastStartHour.toDouble())
+        // Plan goal — dedicated horizontal line across the chart at the user's
+        // fast goal so they can see at a glance which days cleared the bar.
+        if (goalHours in 1..23) {
+            val y = fY(goalHours.toDouble())
             drawLine(
-                color = c.primary.copy(alpha = 0.45f),
+                color = c.primary.copy(alpha = 0.55f),
                 start = Offset(innerLeft, y),
                 end = Offset(innerRight, y),
-                strokeWidth = 1f,
+                strokeWidth = 1.2f,
             )
-            val labelText = "Fat burn"
+            val labelText = "${goalHours}h"
             val style = rightTickStyle.copy(
                 fontSize = 9.sp,
-                color = c.primary.copy(alpha = 0.7f),
+                color = c.primary.copy(alpha = 0.8f),
+                fontWeight = FontWeight.W500,
             )
             val measured = measurer.measure(AnnotatedString(labelText), style)
             drawText(
