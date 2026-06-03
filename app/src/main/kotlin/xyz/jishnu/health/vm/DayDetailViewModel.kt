@@ -173,24 +173,41 @@ class DayDetailViewModel @Inject constructor(
         val s = _state.value
         val zone = s.zone
         val startLt = TimeMath.parseTime(s.startTime)
-        val startInstant = s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-        val endInstant: Long? = s.endTime?.let { endStr ->
-            val durationHours = TimeMath.diffHoursTime(s.startTime, endStr)
-            startInstant + (durationHours * 3_600_000.0).toLong()
+        val endLt = s.endTime?.let { TimeMath.parseTime(it) }
+
+        // s.date is the dayKey's date — which under end-date bucketing is the
+        // day the session ENDS on, not necessarily the day it started.
+        // Resolve the correct calendar day for the start instant:
+        //   - completed + overnight (startHH > endHH): start was the day before
+        //   - completed + same-day: start is on s.date
+        //   - ongoing: keep the existing session's start date (we have no way to
+        //     pick a date when there's no end), just swap the HH:mm portion
+        val sessionId = s.sessionId
+        val existing = sessionId?.let { fastingRepo.sessionById(it) }
+        val startInstant: Long = when {
+            endLt != null && startLt > endLt ->
+                s.date.minusDays(1).atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+            endLt == null && existing != null -> {
+                val origDate = Instant.ofEpochMilli(existing.startMs).atZone(zone).toLocalDate()
+                origDate.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+            }
+            else ->
+                s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+        }
+        // End always lands on dayKey's date — that's exactly what defines the
+        // bucket.
+        val endInstant: Long? = endLt?.let { lt ->
+            s.date.atTime(lt).atZone(zone).toInstant().toEpochMilli()
         }
 
-        val sessionId = s.sessionId
-        if (sessionId != null) {
-            val existing = fastingRepo.sessionById(sessionId)
-            if (existing != null) {
-                fastingRepo.updateSession(
-                    existing.copy(
-                        startMs = startInstant,
-                        endMs = endInstant,
-                        note = s.notes.ifBlank { null },
-                    )
+        if (existing != null) {
+            fastingRepo.updateSession(
+                existing.copy(
+                    startMs = startInstant,
+                    endMs = endInstant,
+                    note = s.notes.ifBlank { null },
                 )
-            }
+            )
         } else if (endInstant != null) {
             fastingRepo.startFast(startInstant, s.goalHours, "16:8").also { newId ->
                 val inserted = fastingRepo.sessionById(newId)
