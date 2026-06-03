@@ -71,7 +71,10 @@ fun DayDetailScreen(
     val durationHours = state.durationHours
     val dh = durationHours.toInt()
     val dm = ((durationHours - dh) * 60).toInt()
-    val status = when {
+    val durationLabel = if (state.hasSession) "${dh}h ${dm.toString().padStart(2, '0')}m" else "—"
+    // No badge / no fill until the user has actually logged something.
+    val status: xyz.jishnu.health.data.model.FastStatus? = when {
+        !state.hasSession -> null
         state.isOngoing -> xyz.jishnu.health.data.model.FastStatus.Ongoing
         state.goalMet -> xyz.jishnu.health.data.model.FastStatus.Goal
         else -> xyz.jishnu.health.data.model.FastStatus.Short
@@ -105,15 +108,23 @@ fun DayDetailScreen(
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text(dh.toString(), style = IntermTheme.typography.hDisplay.copy(fontSize = 44.sp), color = c.ink)
+                            Text(
+                                dh.toString().padStart(2, '0'),
+                                style = IntermTheme.typography.hDisplay.copy(fontSize = 44.sp),
+                                color = if (state.hasSession) c.ink else c.muted,
+                            )
                             Spacer(Modifier.width(2.dp))
                             Text("h", style = IntermTheme.typography.hDisplay.copy(fontSize = 22.sp), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text(dm.toString().padStart(2, '0'), style = IntermTheme.typography.hDisplay.copy(fontSize = 44.sp), color = c.ink)
+                            Text(
+                                dm.toString().padStart(2, '0'),
+                                style = IntermTheme.typography.hDisplay.copy(fontSize = 44.sp),
+                                color = if (state.hasSession) c.ink else c.muted,
+                            )
                             Spacer(Modifier.width(2.dp))
                             Text("m", style = IntermTheme.typography.hDisplay.copy(fontSize = 22.sp), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
                         }
-                        GoalBadge(status = status)
+                        if (status != null) GoalBadge(status = status)
                     }
                     Spacer(Modifier.height(14.dp))
                     GoalBar(durationHours = durationHours, goalH = state.goalHours, status = status)
@@ -125,7 +136,7 @@ fun DayDetailScreen(
                     TimeRow(label = "Started", value = state.startTime, onValueChange = vm::setStart)
                     TimeRow(
                         label = "Ended",
-                        value = state.displayedEndTime ?: "—",
+                        value = state.displayedEndTime,
                         sub = if (state.isOngoing) "Fast is still running" else null,
                         enabled = !state.isOngoing,
                         onValueChange = vm::setEnd,
@@ -146,7 +157,7 @@ fun DayDetailScreen(
                             }
                         }
                         Text(
-                            "${dh}h ${dm.toString().padStart(2, '0')}m",
+                            durationLabel,
                             style = IntermTheme.typography.mono.copy(fontSize = 14.sp, fontWeight = FontWeight.W500),
                             color = c.ink2,
                         )
@@ -373,14 +384,15 @@ private fun GoalBadge(status: xyz.jishnu.health.data.model.FastStatus) {
 }
 
 @Composable
-private fun GoalBar(durationHours: Double, goalH: Int, status: xyz.jishnu.health.data.model.FastStatus) {
+private fun GoalBar(durationHours: Double, goalH: Int, status: xyz.jishnu.health.data.model.FastStatus?) {
     val c = IntermTheme.colors
-    val fillRatio = (durationHours / 24.0).coerceIn(0.0, 1.0).toFloat()
+    val fillRatio = if (status == null) 0f else (durationHours / 24.0).coerceIn(0.0, 1.0).toFloat()
     val goalRatio = (goalH / 24f).coerceIn(0f, 1f)
     val fg = when (status) {
         xyz.jishnu.health.data.model.FastStatus.Goal -> c.primary
         xyz.jishnu.health.data.model.FastStatus.Short -> c.accent
         xyz.jishnu.health.data.model.FastStatus.Ongoing -> c.ink2
+        null -> c.subtle
     }
     // Stage boundaries (skip 0h start and the 24h endpoint).
     val stageBoundaryHours = xyz.jishnu.health.data.constants.Stages.all

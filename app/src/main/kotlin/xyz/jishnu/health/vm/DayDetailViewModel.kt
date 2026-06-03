@@ -28,8 +28,9 @@ data class DayDetailUiState(
     val loaded: Boolean = false,
     val dayKey: Long = 0,
     val date: LocalDate = LocalDate.now(),
-    val startTime: String = "20:00",
-    val endTime: String? = "12:00",
+    /** Null when the user hasn't logged a session for this day yet. */
+    val startTime: String? = null,
+    val endTime: String? = null,
     val weightKg: Double = 70.0,
     val previousWeightKg: Double? = null,
     val notes: String = "",
@@ -44,21 +45,28 @@ data class DayDetailUiState(
     val waterMl: Int = 0,
     val waterGoalMl: Int = 2500,
 ) {
-    private val startInstantMs: Long
-        get() = date.atTime(TimeMath.parseTime(startTime)).atZone(zone).toInstant().toEpochMilli()
+    private val startInstantMs: Long?
+        get() = startTime?.let { date.atTime(TimeMath.parseTime(it)).atZone(zone).toInstant().toEpochMilli() }
 
-    val durationHours: Double = if (endTime != null) {
-        TimeMath.diffHoursTime(startTime, endTime)
-    } else {
-        max(0L, nowMs - startInstantMs) / 3_600_000.0
+    val durationHours: Double = when {
+        startTime == null -> 0.0
+        endTime != null -> TimeMath.diffHoursTime(startTime, endTime)
+        isOngoing -> startInstantMs?.let { max(0L, nowMs - it) / 3_600_000.0 } ?: 0.0
+        else -> 0.0
     }
 
-    val displayedEndTime: String? = if (endTime != null) endTime else {
-        val end = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalTime()
-        fmtLt(end)
+    val displayedEndTime: String? = when {
+        endTime != null -> endTime
+        isOngoing -> {
+            val end = Instant.ofEpochMilli(nowMs).atZone(zone).toLocalTime()
+            fmtLt(end)
+        }
+        else -> null
     }
 
-    val goalMet: Boolean = durationHours >= goalHours
+    val hasSession: Boolean = startTime != null || sessionId != null
+
+    val goalMet: Boolean = hasSession && durationHours >= goalHours
 }
 
 @HiltViewModel
@@ -116,7 +124,10 @@ class DayDetailViewModel @Inject constructor(
 
         val previousWeight = weightRepo.findByDay(dayKey - 86_400_000L)?.weightKg
 
-        val startStr: String
+        // When there's no session for this day, leave the fields blank so the
+        // UI reads as "no data" instead of suggesting fake defaults that the
+        // user might accidentally save.
+        val startStr: String?
         val endStr: String?
         val isOngoing: Boolean
 
@@ -132,8 +143,8 @@ class DayDetailViewModel @Inject constructor(
                 isOngoing = true
             }
         } else {
-            startStr = settings.fastStartTime
-            endStr = TimeMath.addHoursToTime(settings.fastStartTime, plan.fastHours.toDouble())
+            startStr = null
+            endStr = null
             isOngoing = false
         }
 
@@ -172,46 +183,47 @@ class DayDetailViewModel @Inject constructor(
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
         val zone = s.zone
-        val startLt = TimeMath.parseTime(s.startTime)
-        val endLt = s.endTime?.let { TimeMath.parseTime(it) }
 
-        // s.date is the dayKey's date — which under end-date bucketing is the
-        // day the session ENDS on, not necessarily the day it started.
-        // Resolve the correct calendar day for the start instant:
-        //   - completed + overnight (startHH > endHH): start was the day before
-        //   - completed + same-day: start is on s.date
-        //   - ongoing: keep the existing session's start date (we have no way to
-        //     pick a date when there's no end), just swap the HH:mm portion
-        val sessionId = s.sessionId
-        val existing = sessionId?.let { fastingRepo.sessionById(it) }
-        val startInstant: Long = when {
-            endLt != null && startLt > endLt ->
-                s.date.minusDays(1).atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-            endLt == null && existing != null -> {
-                val origDate = Instant.ofEpochMilli(existing.startMs).atZone(zone).toLocalDate()
-                origDate.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+        // Only touch the fasting tables if the user has actually entered a
+        // start time. A blank row should never silently create a session.
+        val startStr = s.startTime
+        if (startStr != null) {
+            val startLt = TimeMath.parseTime(startStr)
+            val endLt = s.endTime?.let { TimeMath.parseTime(it) }
+            val sessionId = s.sessionId
+            val existing = sessionId?.let { fastingRepo.sessionById(it) }
+            // s.date is the dayKey's date — which under end-date bucketing is the
+            // day the session ENDS on, not necessarily the day it started.
+            //   - completed + overnight (startHH > endHH): start was the day before
+            //   - completed + same-day: start is on s.date
+            //   - ongoing: keep the existing session's start date (we have no way
+            //     to pick a date when there's no end), just swap the HH:mm portion
+            val startInstant: Long = when {
+                endLt != null && startLt > endLt ->
+                    s.date.minusDays(1).atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+                endLt == null && existing != null -> {
+                    val origDate = Instant.ofEpochMilli(existing.startMs).atZone(zone).toLocalDate()
+                    origDate.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
+                }
+                else ->
+                    s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
             }
-            else ->
-                s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-        }
-        // End always lands on dayKey's date — that's exactly what defines the
-        // bucket.
-        val endInstant: Long? = endLt?.let { lt ->
-            s.date.atTime(lt).atZone(zone).toInstant().toEpochMilli()
-        }
-
-        if (existing != null) {
-            fastingRepo.updateSession(
-                existing.copy(
-                    startMs = startInstant,
-                    endMs = endInstant,
-                    note = s.notes.ifBlank { null },
+            val endInstant: Long? = endLt?.let { lt ->
+                s.date.atTime(lt).atZone(zone).toInstant().toEpochMilli()
+            }
+            if (existing != null) {
+                fastingRepo.updateSession(
+                    existing.copy(
+                        startMs = startInstant,
+                        endMs = endInstant,
+                        note = s.notes.ifBlank { null },
+                    )
                 )
-            )
-        } else if (endInstant != null) {
-            fastingRepo.startFast(startInstant, s.goalHours, "16:8").also { newId ->
-                val inserted = fastingRepo.sessionById(newId)
-                inserted?.let { fastingRepo.updateSession(it.copy(endMs = endInstant, note = s.notes.ifBlank { null })) }
+            } else if (endInstant != null) {
+                fastingRepo.startFast(startInstant, s.goalHours, "16:8").also { newId ->
+                    val inserted = fastingRepo.sessionById(newId)
+                    inserted?.let { fastingRepo.updateSession(it.copy(endMs = endInstant, note = s.notes.ifBlank { null })) }
+                }
             }
         }
         weightRepo.upsertForDay(s.dayKey, s.weightKg, s.notes.ifBlank { null })

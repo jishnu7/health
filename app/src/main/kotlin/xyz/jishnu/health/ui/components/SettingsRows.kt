@@ -87,10 +87,12 @@ fun NavRow(
 @Composable
 fun TimeRow(
     label: String,
-    value: String,
+    value: String?,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     sub: String? = null,
+    placeholder: String = "—",
+    pickerFallback: String = "08:00",
     enabled: Boolean = true,
     showDivider: Boolean = true,
 ) {
@@ -108,7 +110,7 @@ fun TimeRow(
             }
         }
         Text(
-            text = value,
+            text = value ?: placeholder,
             style = IntermTheme.typography.mono.copy(fontSize = 14.sp, fontWeight = FontWeight.W500),
             color = IntermTheme.colors.muted,
         )
@@ -117,7 +119,7 @@ fun TimeRow(
     }
     if (showDialog) {
         TimePickerDialog(
-            initial = value,
+            initial = value ?: pickerFallback,
             onDismiss = { showDialog = false },
             onConfirm = { showDialog = false; onValueChange(it) },
         )
