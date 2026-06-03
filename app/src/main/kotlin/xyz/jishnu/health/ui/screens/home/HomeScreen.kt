@@ -450,7 +450,11 @@ private fun IdleBody(
             )
         }
 
-        IntermButton(onClick = onStart, variant = IntermButtonVariant.Primary, fillWidth = true) {
+        IntermButton(
+            onClick = onStart,
+            variant = IntermButtonVariant.Primary,
+            size = xyz.jishnu.health.ui.components.IntermButtonSize.Large,
+        ) {
             Icon(IntermIcons.Play, contentDescription = null)
             Text("Start Fasting")
         }

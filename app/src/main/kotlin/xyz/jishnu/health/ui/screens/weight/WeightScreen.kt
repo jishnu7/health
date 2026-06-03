@@ -145,7 +145,8 @@ fun WeightScreen(
                 IntermButton(
                     onClick = { vm.save { onNavigateTab(NavTab.Today) } },
                     variant = IntermButtonVariant.Primary,
-                    fillWidth = true,
+                    size = xyz.jishnu.health.ui.components.IntermButtonSize.Large,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
                 ) {
                     Icon(IntermIcons.Check, contentDescription = null)
                     Text("Save Entry")
