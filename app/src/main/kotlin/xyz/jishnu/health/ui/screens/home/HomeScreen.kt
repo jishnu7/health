@@ -200,7 +200,7 @@ fun HomeScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             IntermTopBar(
                 modifier = Modifier.statusBarsPadding(),
-                title = "Intrmt",
+                title = "Fast",
                 trailing = {
                     Box(
                         modifier = Modifier

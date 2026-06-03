@@ -39,7 +39,7 @@ fun OnboardWelcomeScreen(
                 .navigationBarsPadding()
                 .padding(start = 28.dp, end = 28.dp, top = 60.dp, bottom = 28.dp),
         ) {
-            Text("WELCOME TO INTRMT", style = IntermTheme.typography.hEyebrow, color = c.muted)
+            Text("WELCOME TO FAST", style = IntermTheme.typography.hEyebrow, color = c.muted)
             Spacer(Modifier.height(8.dp))
             Text(
                 "Track your fasting and your weight.",
