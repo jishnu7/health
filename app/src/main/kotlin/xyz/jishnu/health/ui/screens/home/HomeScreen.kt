@@ -258,6 +258,7 @@ fun HomeScreen(
                         IdleBody(
                             state = state,
                             onStart = onStartWithSweep,
+                            onOpenStages = onOpenStages,
                         )
                     }
                 }
@@ -422,6 +423,7 @@ private fun ActiveBody(
 private fun IdleBody(
     state: FastingUiState,
     onStart: () -> Unit,
+    onOpenStages: () -> Unit,
 ) {
     val c = IntermTheme.colors
     Column(
@@ -429,8 +431,11 @@ private fun IdleBody(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        IntermCard(modifier = Modifier.fillMaxWidth()) {
-            Text("READY", style = IntermTheme.typography.hEyebrow, color = c.muted)
+        IntermCard(modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenStages)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("READY", style = IntermTheme.typography.hEyebrow, color = c.muted)
+                Icon(IntermIcons.Chevron, contentDescription = null, tint = c.muted)
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 "Ready when you are.",
@@ -439,7 +444,7 @@ private fun IdleBody(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Start a ${state.plan.label} fast. We'll track your progress through each metabolic phase.",
+                "Start a ${state.plan.label} fast. Tap to preview the metabolic phases you'll move through.",
                 style = IntermTheme.typography.body,
                 color = c.ink2,
             )
