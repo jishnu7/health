@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Edge-to-edge handles bar colors itself; setting statusBarColor here
+         triggers the API 35 deprecation. windowLightStatusBar stays — it's a
+         theme hint for icon contrast and is honored across SDK levels. -->
     <style name="Theme.Interm" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
