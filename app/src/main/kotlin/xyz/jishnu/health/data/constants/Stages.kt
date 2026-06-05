@@ -26,6 +26,11 @@ object Stages {
             benefits = listOf("Insulin returning to baseline", "Mild appetite reduction", "Stable blood sugar"),
             hue = 32,
         ),
+        // From here on, the user has crossed into glycogen burn — the first
+        // "good" milestone of a fast. Hues jump from warm orange (early) into
+        // the green/teal end of the spectrum and stay there through autophagy
+        // so the stage ribbon reads as "fed/early = still warming up; the
+        // rest = doing real work".
         Stage(
             id = "glycogen",
             name = "Glycogen burn",
@@ -35,7 +40,7 @@ object Stages {
             title = "Glycogen depletion",
             body = "The liver releases its stored glycogen to maintain blood sugar. Reserves are running down.",
             benefits = listOf("Liver glycogen depleting", "Body preparing to shift fuel", "Hunger signals quieting"),
-            hue = 54,
+            hue = 130,
         ),
         Stage(
             id = "shift",
@@ -46,7 +51,7 @@ object Stages {
             title = "Fuel transition",
             body = "With glycogen low, your body begins breaking down fat for energy. The metabolic switch is flipping.",
             benefits = listOf("Lipolysis begins", "Free fatty acids rise", "Mental clarity often reported"),
-            hue = 96,
+            hue = 145,
         ),
         Stage(
             id = "burn",
@@ -57,7 +62,7 @@ object Stages {
             title = "Fat metabolism",
             body = "You are now running primarily on fat. Stored triglycerides break down into fatty acids for fuel.",
             benefits = listOf("Fat oxidation accelerating", "Insulin sensitivity improving", "Steady energy"),
-            hue = 140,
+            hue = 160,
         ),
         Stage(
             id = "ketosis",
@@ -68,7 +73,7 @@ object Stages {
             title = "Ketogenesis begins",
             body = "The liver starts producing ketones from fatty acids. Your brain begins using them alongside glucose.",
             benefits = listOf("Ketone production begins", "Reduced inflammation", "Improved focus"),
-            hue = 162,
+            hue = 175,
         ),
         Stage(
             id = "deep",
@@ -79,7 +84,7 @@ object Stages {
             title = "Fat-adapted",
             body = "Ketone levels rise significantly. Most of your energy is now coming from fat-derived fuel.",
             benefits = listOf("Significant fat loss window", "Cognitive benefits peak", "Appetite suppression"),
-            hue = 188,
+            hue = 195,
         ),
         Stage(
             id = "autophagy",
