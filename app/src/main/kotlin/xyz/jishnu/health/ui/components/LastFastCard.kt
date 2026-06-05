@@ -1,5 +1,6 @@
 package xyz.jishnu.health.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,11 +27,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import xyz.jishnu.health.R
 import xyz.jishnu.health.data.constants.Stages
 import xyz.jishnu.health.domain.StageCalculator
 import xyz.jishnu.health.domain.TimeMath
@@ -41,6 +52,8 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Snapshot of a completed fast as needed by [LastFastCard]. The card never
@@ -67,11 +80,25 @@ data class LastFastEdit(
     val onEnd: (String) -> Unit,
 )
 
+private val HeaderGradientStops = arrayOf(
+    0.0f to Color(0xFF2A4D3E),
+    0.46f to Color(0xFF3D6B56),
+    0.92f to Color(0xFFC46A45),
+    1.0f to Color(0xFFCC7348),
+)
+
+private val Cream = Color(0xFFFDFBF7)
+private val CreamMuted = Color(0xCBFDFBF7) // ≈ rgba(253,251,247,0.80)
+private val CreamSubtle = Color(0xB8FDFBF7) // ≈ rgba(253,251,247,0.72)
+private val CreamFaint = Color(0xA6FDFBF7) // ≈ rgba(253,251,247,0.65)
+
 /**
- * Recap of the most recent completed fast — duration headline, goal-met chip,
- * stage reached, 24h stage ribbon filled to the duration, and the wall-clock
- * window. Mirrors `LastFastCard` in `docs/project/shared.jsx`. Optionally
- * shows a share button and exposes editable time markers for day detail.
+ * Recap of the most recent completed fast — dark-gradient header band with the
+ * brand lockup, share button, date, duration headline and goal chip, plus a
+ * body section showing the stage reached, the 24h stage ribbon filled to the
+ * duration, and the wall-clock window. Mirrors `LastFastCard` in
+ * `docs/project/shared.jsx`. Optionally shows a share button and exposes
+ * editable time markers for day detail.
  */
 @Composable
 fun LastFastCard(
@@ -116,102 +143,16 @@ fun LastFastCard(
             .clip(RoundedCornerShape(18.dp))
             .background(c.card),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(lerp(c.card, c.primary, 0.22f))
-                .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    dayLabel.uppercase(),
-                    style = IntermTheme.typography.hEyebrow,
-                    color = c.muted,
-                )
-                when {
-                    forCapture -> Text(
-                        "INTERMITTENT FASTING",
-                        style = IntermTheme.typography.hEyebrow,
-                        color = c.muted,
-                    )
-                    onShare != null -> Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onShare),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            IntermIcons.Share,
-                            contentDescription = "Share",
-                            tint = c.primary,
-                            modifier = Modifier.size(17.dp),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    hh.toString(),
-                    style = IntermTheme.typography.hDisplay.copy(
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.W400,
-                        lineHeight = 42.sp,
-                    ),
-                    color = c.primary,
-                )
-                Text(
-                    "h",
-                    style = IntermTheme.typography.hDisplay.copy(fontSize = 22.sp),
-                    color = c.primary2,
-                    modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    mm.toString().padStart(2, '0'),
-                    style = IntermTheme.typography.hDisplay.copy(
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.W400,
-                        lineHeight = 42.sp,
-                    ),
-                    color = c.primary,
-                )
-                Text(
-                    "m",
-                    style = IntermTheme.typography.hDisplay.copy(fontSize = 22.sp),
-                    color = c.primary2,
-                    modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(c.primarySoft)
-                    .padding(horizontal = 11.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (goalMet) {
-                    Icon(
-                        IntermIcons.Check,
-                        contentDescription = null,
-                        tint = c.primary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-                Text(
-                    "${summary.planLabel} · ${if (goalMet) "Goal reached" else "$pct% of goal"}",
-                    style = IntermTheme.typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.W500),
-                    color = c.primary,
-                )
-            }
-        }
+        HeaderBand(
+            dayLabel = dayLabel,
+            hh = hh,
+            mm = mm,
+            pct = pct,
+            goalMet = goalMet,
+            planLabel = summary.planLabel,
+            onShare = onShare,
+            forCapture = forCapture,
+        )
 
         Column(
             modifier = Modifier
@@ -305,9 +246,6 @@ fun LastFastCard(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-            BrandFooter()
-
             if (edit != null && showStartPicker) {
                 TimePickerDialog(
                     initial = edit.startTime,
@@ -328,6 +266,211 @@ fun LastFastCard(
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun HeaderBand(
+    dayLabel: String,
+    hh: Int,
+    mm: Int,
+    pct: Int,
+    goalMet: Boolean,
+    planLabel: String,
+    onShare: (() -> Unit)?,
+    forCapture: Boolean,
+) {
+    val gradient = remember {
+        Brush.linearGradient(
+            colorStops = HeaderGradientStops,
+            start = Offset.Zero,
+            end = Offset.Infinite,
+        )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+            .background(gradient),
+    ) {
+        // The motif sits in the header's top-right corner, overflowing past
+        // both edges; align(TopEnd) anchors the right edge, then
+        // absoluteOffset(x = 22.dp, y = -26.dp) pushes it 22dp past the right
+        // and 26dp past the top — matching the prototype's right:-22 / top:-26.
+        // The parent's clipToBounds trims the overflow.
+        BrandMotif(
+            modifier = Modifier
+                .size(132.dp)
+                .align(Alignment.TopEnd)
+                .absoluteOffset(x = 22.dp, y = (-26).dp)
+                .alpha(0.18f),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 18.dp, top = 15.dp, bottom = 18.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_brand_dark),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Text(
+                        "Fast",
+                        style = IntermTheme.typography.body.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.W600,
+                            letterSpacing = (-0.01f).sp,
+                        ),
+                        color = Cream,
+                    )
+                }
+                when {
+                    forCapture -> Text(
+                        "INTERMITTENT FASTING",
+                        style = IntermTheme.typography.hEyebrow.copy(fontSize = 10.5.sp),
+                        color = CreamSubtle,
+                    )
+                    onShare != null -> Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x29FFFFFF)) // ≈ rgba(255,255,255,0.16)
+                            .clickable(onClick = onShare),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            IntermIcons.Share,
+                            contentDescription = "Share",
+                            tint = Cream,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(15.dp))
+            Text(
+                dayLabel.uppercase(),
+                style = IntermTheme.typography.hEyebrow.copy(
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.W600,
+                    letterSpacing = 1.45.sp,
+                ),
+                color = CreamSubtle,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    hh.toString(),
+                    style = IntermTheme.typography.hDisplay.copy(
+                        fontSize = 46.sp,
+                        fontWeight = FontWeight.W400,
+                        lineHeight = 46.sp,
+                        letterSpacing = (-1.4f).sp,
+                    ),
+                    color = Cream,
+                )
+                Text(
+                    "h",
+                    style = IntermTheme.typography.hDisplay.copy(fontSize = 23.sp, lineHeight = 23.sp),
+                    color = CreamFaint,
+                    modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    mm.toString().padStart(2, '0'),
+                    style = IntermTheme.typography.hDisplay.copy(
+                        fontSize = 46.sp,
+                        fontWeight = FontWeight.W400,
+                        lineHeight = 46.sp,
+                        letterSpacing = (-1.4f).sp,
+                    ),
+                    color = Cream,
+                )
+                Text(
+                    "m",
+                    style = IntermTheme.typography.hDisplay.copy(fontSize = 23.sp, lineHeight = 23.sp),
+                    color = CreamFaint,
+                    modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color(0x2BFFFFFF)) // ≈ rgba(255,255,255,0.17)
+                    .padding(horizontal = 11.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (goalMet) {
+                    Icon(
+                        IntermIcons.Check,
+                        contentDescription = null,
+                        tint = Cream,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+                Text(
+                    "$planLabel · ${if (goalMet) "Goal reached" else "$pct% of goal"}",
+                    style = IntermTheme.typography.caption.copy(fontSize = 12.sp, fontWeight = FontWeight.W500),
+                    color = Cream,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The cream concentric-rings + radial-ticks motif that overflows the
+ * top-right corner of the header band, mirroring the SVG in the prototype's
+ * LastFastCard. Drawn at the prototype's 100×100 viewBox so the geometry
+ * (three rings + 24 ticks with every 6th being longer) stays exact.
+ */
+@Composable
+private fun BrandMotif(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val cream = Cream
+        val unit = size.minDimension / 100f
+        val cx = 50f * unit
+        val cy = 50f * unit
+        val strokeBase = 0.8f * unit
+        listOf(46f, 34f, 22f).forEach { radius ->
+            drawCircle(
+                color = cream,
+                center = Offset(cx, cy),
+                radius = radius * unit,
+                style = Stroke(width = strokeBase),
+            )
+        }
+        for (i in 0 until 24) {
+            val angle = (i.toDouble() / 24.0) * 2 * Math.PI - Math.PI / 2
+            val isCardinal = i % 6 == 0
+            val inner = 46f
+            val outer = inner + if (isCardinal) 5f else 2.6f
+            val tickWidth = if (isCardinal) 1.1f else 0.6f
+            val x1 = cx + cos(angle).toFloat() * inner * unit
+            val y1 = cy + sin(angle).toFloat() * inner * unit
+            val x2 = cx + cos(angle).toFloat() * outer * unit
+            val y2 = cy + sin(angle).toFloat() * outer * unit
+            drawLine(
+                color = cream,
+                start = Offset(x1, y1),
+                end = Offset(x2, y2),
+                strokeWidth = tickWidth * unit,
+                cap = StrokeCap.Round,
+            )
         }
     }
 }
@@ -376,32 +519,6 @@ private fun MarkerColumn(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun BrandFooter() {
-    val c = IntermTheme.colors
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            IntermIcons.Home,
-            contentDescription = null,
-            tint = c.primary.copy(alpha = 0.55f),
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.size(6.dp))
-        Text(
-            "Fast",
-            style = IntermTheme.typography.body.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.W600,
-            ),
-            color = c.ink.copy(alpha = 0.55f),
-        )
     }
 }
 

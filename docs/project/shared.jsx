@@ -577,11 +577,11 @@ function StagesPreviewCard({ onOpen }) {
 // ─────────────────────────────────────────────────────────────
 // Brand glyph — tiny ring + dot, for share/footer contexts
 // ─────────────────────────────────────────────────────────────
-function RingGlyph({ size = 15 }) {
+function RingGlyph({ size = 15, ring = 'var(--primary)', dot = 'var(--accent)' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>
-      <circle cx="12" cy="12" r="8.5" fill="none" stroke="var(--primary)" strokeWidth="3" />
-      <circle cx="12" cy="3.5" r="2.4" fill="var(--accent)" />
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke={ring} strokeWidth="3" />
+      <circle cx="12" cy="3.5" r="2.4" fill={dot} />
     </svg>
   );
 }
@@ -619,20 +619,42 @@ function LastFastCard({ onShare, fast, edit }) {
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* header band */}
-      <div style={{ padding: '18px 18px 16px', background: 'color-mix(in srgb, var(--primary) 10%, var(--card))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="h-eyebrow" style={{ color: 'var(--muted)' }}>{dayLabel}</div>
-          <button className="fast-iconbtn" style={{ width: 34, height: 34, color: 'var(--primary)' }}
-            onClick={onShare || undefined}><Icon.Share style={{ width: 17, height: 17 }} /></button>
+      {/* header band — bold, share-ready */}
+      <div style={{ position: 'relative', overflow: 'hidden', padding: '15px 18px 18px', background: 'linear-gradient(135deg, #2a4d3e 0%, #3d6b56 46%, #c46a45 92%, #e08a4f 120%)' }}>
+        {/* brand ring motif */}
+        <svg aria-hidden="true" viewBox="0 0 100 100" style={{ position: 'absolute', top: -26, right: -22, width: 132, height: 132, opacity: 0.18, pointerEvents: 'none' }}>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#fdfbf7" strokeWidth="0.8" />
+          <circle cx="50" cy="50" r="34" fill="none" stroke="#fdfbf7" strokeWidth="0.8" />
+          <circle cx="50" cy="50" r="22" fill="none" stroke="#fdfbf7" strokeWidth="0.8" />
+          {Array.from({ length: 24 }).map((_, i) => {
+            const a = (i / 24) * Math.PI * 2 - Math.PI / 2;
+            const isC = i % 6 === 0;
+            const inner = 46, outer = inner + (isC ? 5 : 2.6);
+            return <line key={i} x1={50 + Math.cos(a) * inner} y1={50 + Math.sin(a) * inner} x2={50 + Math.cos(a) * outer} y2={50 + Math.sin(a) * outer} stroke="#fdfbf7" strokeWidth={isC ? 1.1 : 0.6} strokeLinecap="round" />;
+          })}
+        </svg>
+
+        {/* brand lockup + share */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <RingGlyph size={16} ring="rgba(253,251,247,0.95)" dot="#f1b79f" />
+            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em', color: '#fdfbf7' }}>Fast</span>
+          </div>
+          <button className="fast-iconbtn" style={{ width: 32, height: 32, color: '#fdfbf7', background: 'rgba(255,255,255,0.16)' }}
+            onClick={onShare || undefined}><Icon.Share style={{ width: 16, height: 16 }} /></button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: 10 }}>
-          <span className="mono" style={{ fontSize: 42, fontWeight: 400, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--primary)' }}>
-            {H}<span style={{ fontSize: 22, color: 'var(--primary-2)' }}>h</span> {String(M).padStart(2, '0')}<span style={{ fontSize: 22, color: 'var(--primary-2)' }}>m</span>
-          </span>
+
+        {/* date + duration */}
+        <div style={{ position: 'relative', marginTop: 15 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(253,251,247,0.72)' }}>{dayLabel}</div>
+          <div className="mono" style={{ fontSize: 46, fontWeight: 400, letterSpacing: '-0.03em', lineHeight: 1, marginTop: 8, color: '#fdfbf7' }}>
+            {H}<span style={{ fontSize: 23, color: 'rgba(253,251,247,0.65)' }}>h</span> {String(M).padStart(2, '0')}<span style={{ fontSize: 23, color: 'rgba(253,251,247,0.65)' }}>m</span>
+          </div>
         </div>
-        <div style={{ marginTop: 12 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 12, fontWeight: 500 }}>
+
+        {/* goal chip */}
+        <div style={{ position: 'relative', marginTop: 14 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, background: 'rgba(255,255,255,0.17)', color: '#fdfbf7', fontSize: 12, fontWeight: 500 }}>
             {goalMet && <Icon.Check style={{ width: 14, height: 14 }} />}
             {lf.planLabel} · {goalMet ? 'Goal reached' : pct + '% of goal'}
           </span>
@@ -692,12 +714,6 @@ function LastFastCard({ onShare, fast, edit }) {
               <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(end)}</div>
             )}
           </div>
-        </div>
-
-        {/* brand footer for share */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, opacity: 0.55 }}>
-          <RingGlyph size={14} />
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '-0.01em' }}>Fast</span>
         </div>
       </div>
     </div>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Compose-rendered port of docs/project/exports/Fast Icon - Dark.svg —
+  the dark-on-cream variant of the Fast app icon, used in contexts where the
+  background is dark (share card header band). Geometry matches the SVG 1:1;
+  the SVG's black background rect is intentionally omitted so the icon
+  composites cleanly onto whatever surface it's drawn over.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- 4 cardinal ticks (12/3/6/9 o'clock) — thicker. -->
+    <path
+        android:pathData="
+            M 512 136 L 512 108
+            M 888 512 L 916 512
+            M 512 888 L 512 916
+            M 136 512 L 108 512"
+        android:strokeColor="#FDFBF7"
+        android:strokeAlpha="0.5"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <!-- 20 minor ticks at the remaining 15° marks. -->
+    <path
+        android:pathData="
+            M 609.32 148.81 L 612.94 135.29
+            M 700 186.37 L 707 174.25
+            M 777.87 246.13 L 787.77 236.23
+            M 837.63 324 L 849.75 317
+            M 875.19 414.68 L 888.71 411.06
+            M 875.19 609.32 L 888.71 612.94
+            M 837.63 700 L 849.75 707
+            M 777.87 777.87 L 787.77 787.77
+            M 700 837.63 L 707 849.75
+            M 609.32 875.19 L 612.94 888.71
+            M 414.68 875.19 L 411.06 888.71
+            M 324 837.63 L 317 849.75
+            M 246.13 777.87 L 236.23 787.77
+            M 186.37 700 L 174.25 707
+            M 148.81 609.32 L 135.29 612.94
+            M 148.81 414.68 L 135.29 411.06
+            M 186.37 324 L 174.25 317
+            M 246.13 246.13 L 236.23 236.23
+            M 324 186.37 L 317 174.25
+            M 414.68 148.81 L 411.06 135.29"
+        android:strokeColor="#FDFBF7"
+        android:strokeAlpha="0.5"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+    <!-- Cream ring (r=320, stroke=80). -->
+    <path
+        android:pathData="M 192 512 A 320 320 0 1 1 832 512 A 320 320 0 1 1 192 512 Z"
+        android:strokeColor="#FDFBF7"
+        android:strokeWidth="80"
+        android:fillColor="#00000000" />
+
+    <!-- Terracotta progress dot at the 70% mark. -->
+    <path
+        android:pathData="M 149.66 610.89 A 58 58 0 1 1 265.66 610.89 A 58 58 0 1 1 149.66 610.89 Z"
+        android:fillColor="#D97757" />
+</vector>
