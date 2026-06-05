@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -49,8 +48,7 @@ import xyz.jishnu.health.domain.StageCalculator
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.domain.WeightMath
-import kotlinx.coroutines.launch
-import xyz.jishnu.health.ui.components.CaptureBox
+import xyz.jishnu.health.ui.components.ShareableLastFastCard
 import xyz.jishnu.health.ui.components.GoalChip
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
@@ -65,8 +63,6 @@ import xyz.jishnu.health.ui.components.ProgressRing
 import xyz.jishnu.health.ui.components.StageDots
 import xyz.jishnu.health.ui.components.TimeRow
 import xyz.jishnu.health.ui.components.rebuildSummary
-import xyz.jishnu.health.ui.components.rememberCardCapture
-import xyz.jishnu.health.ui.components.shareBitmapAsImage
 import xyz.jishnu.health.ui.screens.water.WaterGlass
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.DayDetailViewModel
@@ -344,10 +340,6 @@ private fun CompletedFastBlock(
     onSetEnd: (String) -> Unit,
     onResume: () -> Unit,
 ) {
-    val c = IntermTheme.colors
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val capture = rememberCardCapture()
     val plan = xyz.jishnu.health.data.constants.Plans.all.firstOrNull { it.fastHours == state.goalHours }
     val planLabel = plan?.label ?: "${state.goalHours}:${24 - state.goalHours}"
     val startTime = state.startTime ?: "00:00"
@@ -366,37 +358,12 @@ private fun CompletedFastBlock(
         onStart = onSetStart,
         onEnd = onSetEnd,
     )
-    // Dual-card layer: the visible card has the editable Started/Ended
-    // markers + share button, while a hidden sibling (alpha 0, forCapture =
-    // true, edit = null) is continuously drawn into the GraphicsLayer. On
-    // share we just read the layer — no recomposition, no flash.
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(0f),
-            ) {
-                CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
-                    LastFastCard(
-                        summary = summary,
-                        modifier = Modifier.fillMaxWidth(),
-                        forCapture = true,
-                    )
-                }
-            }
-            LastFastCard(
-                summary = summary,
-                modifier = Modifier.fillMaxWidth(),
-                edit = edit,
-                onShare = {
-                    scope.launch {
-                        val bitmap = capture.captureBitmap(paddingPx = 48) ?: return@launch
-                        shareBitmapAsImage(context, bitmap)
-                    }
-                },
-            )
-        }
+        ShareableLastFastCard(
+            summary = summary,
+            modifier = Modifier.fillMaxWidth(),
+            edit = edit,
+        )
         if (state.canResume) {
             IntermButton(
                 onClick = onResume,

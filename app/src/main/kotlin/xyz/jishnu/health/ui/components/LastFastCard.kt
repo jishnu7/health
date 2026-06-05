@@ -65,6 +65,13 @@ data class LastFastSummary(
     val durationHours: Double,
     val goalHours: Int,
     val planLabel: String,
+    /**
+     * True when the fast is still running and [endMs] is just the current
+     * wall-clock moment (used for the snapshot share from Home's active
+     * state). The card swaps the "Ended" marker for an "Ongoing" label so the
+     * shared image reads as a live progress snapshot, not a completed fast.
+     */
+    val isOngoing: Boolean = false,
 )
 
 /**
@@ -211,7 +218,7 @@ fun LastFastCard(
             Spacer(Modifier.height(12.dp))
 
             val startTimeLabel = TimeMath.fmtTime(start, zone)
-            val endTimeLabel = TimeMath.fmtTime(end, zone)
+            val endTimeLabel = if (summary.isOngoing) "Ongoing" else TimeMath.fmtTime(end, zone)
 
             var showStartPicker by remember { mutableStateOf(false) }
             var showEndPicker by remember { mutableStateOf(false) }
@@ -238,11 +245,13 @@ fun LastFastCard(
                     Spacer(Modifier.size(6.dp))
                     Box(modifier = Modifier.height(1.dp).background(c.border).widthIn(min = 24.dp, max = 40.dp).fillMaxWidth())
                 }
+                // The Ongoing marker is never editable — an in-progress fast
+                // has no end time to set yet.
                 MarkerColumn(
-                    label = "Ended",
+                    label = if (summary.isOngoing) "Status" else "Ended",
                     value = endTimeLabel,
                     align = Alignment.End,
-                    onClick = edit?.let { { showEndPicker = true } },
+                    onClick = if (summary.isOngoing) null else edit?.let { { showEndPicker = true } },
                 )
             }
 

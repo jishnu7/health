@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -36,9 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,20 +47,20 @@ import kotlinx.coroutines.launch
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.ui.components.BottomNav
-import xyz.jishnu.health.ui.components.CaptureBox
 import xyz.jishnu.health.ui.components.EnergyPhaseCard
+import xyz.jishnu.health.ui.components.HiddenLastFastCaptureCard
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonSize
 import xyz.jishnu.health.ui.components.IntermButtonVariant
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermTopBar
-import xyz.jishnu.health.ui.components.LastFastCard
 import xyz.jishnu.health.ui.components.LastFastSummary
 import xyz.jishnu.health.ui.components.NavTab
 import xyz.jishnu.health.ui.components.ProgressRing
+import xyz.jishnu.health.ui.components.ShareableLastFastCard
 import xyz.jishnu.health.ui.components.StagesPreviewCard
 import xyz.jishnu.health.ui.components.rememberCardCapture
-import xyz.jishnu.health.ui.components.shareBitmapAsImage
+import xyz.jishnu.health.ui.components.rememberFastShareTrigger
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.FastingUiState
 import xyz.jishnu.health.vm.FastingViewModel
@@ -374,9 +373,6 @@ private fun ReturningContent(
     onOpenStages: () -> Unit,
 ) {
     val c = IntermTheme.colors
-    val context = LocalContext.current
-    val capture = rememberCardCapture()
-    val scope = rememberCoroutineScope()
 
     val endMs = lastFast.endMs ?: state.nowMs
     val durationMs = (endMs - lastFast.startMs).coerceAtLeast(0L)
@@ -399,35 +395,10 @@ private fun ReturningContent(
             body = "Here's your last fast. Start another ${state.plan.label} whenever you're ready.",
         )
 
-        // Dual-card layer: the visible card carries the share button and the
-        // hidden sibling (same data, forCapture = true) is continuously drawn
-        // into the GraphicsLayer at alpha 0. On share, we read the layer's
-        // current pixels — no state toggle, no flash.
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(0f),
-            ) {
-                CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
-                    LastFastCard(
-                        summary = summary,
-                        modifier = Modifier.fillMaxWidth(),
-                        forCapture = true,
-                    )
-                }
-            }
-            LastFastCard(
-                summary = summary,
-                modifier = Modifier.fillMaxWidth(),
-                onShare = {
-                    scope.launch {
-                        val bitmap = capture.captureBitmap(paddingPx = 48) ?: return@launch
-                        shareBitmapAsImage(context, bitmap)
-                    }
-                },
-            )
-        }
+        ShareableLastFastCard(
+            summary = summary,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         Column(
             modifier = Modifier
@@ -505,21 +476,41 @@ private fun ActiveHomeContent(
     val startedAt = state.fastStartMs?.let { Instant.ofEpochMilli(it) }
     val goalAt = state.fastEndMs?.let { Instant.ofEpochMilli(it) }
 
+    // Hidden capture for sharing the in-progress fast as a snapshot. The
+    // summary is rebuilt each tick from the live state so a tap on Share
+    // captures the latest pixels — duration, current stage, the works.
+    val capture = rememberCardCapture()
+    val ongoingSummary = remember(state.fastStartMs, state.nowMs, state.goalHours, state.plan.label) {
+        val startMs = state.fastStartMs ?: state.nowMs
+        LastFastSummary(
+            startMs = startMs,
+            endMs = state.nowMs,
+            durationHours = state.elapsedHours,
+            goalHours = state.goalHours,
+            planLabel = state.plan.label,
+            isOngoing = true,
+        )
+    }
+    val share = rememberFastShareTrigger(capture, chooserTitle = "Share progress")
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        HiddenLastFastCaptureCard(summary = ongoingSummary, capture = capture)
+
         HeaderSection(
             eyebrow = "Fasting · ${state.plan.label}",
             title = "Keep it going.",
             body = "You're ${(state.progress * 100).toInt()}% of the way to your ${state.goalHours}-hour goal — keep it steady.",
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(c.card)
-                .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(c.card)
+                    .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             ProgressRing(
                 progress = ringProgress,
                 size = RingSize,
@@ -576,6 +567,24 @@ private fun ActiveHomeContent(
                     Icon(IntermIcons.Food, contentDescription = null)
                     Text("I Ate")
                 }
+            }
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 14.dp, end = 14.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(c.primarySoft)
+                    .clickable(onClick = share),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    IntermIcons.Share,
+                    contentDescription = "Share progress",
+                    tint = c.primary,
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
 
