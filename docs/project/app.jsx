@@ -77,6 +77,8 @@ function FastInjector({ initialFasting, initialOffsetH, hasLastFast = true, plan
   const startFast = () => { setFastStartMs(Date.now()); setIsFasting(true); };
   const endFast = () => { setIsFasting(false); };
   const resetFast = () => { setFastStartMs(Date.now()); setIsFasting(true); };
+  // Resume a previously-ended fast: keep its original start so elapsed continues.
+  const resumeFast = (startMs) => { setFastStartMs(startMs != null ? startMs : fastStartMs); setIsFasting(true); };
 
   const history = React.useMemo(() => {
     const days = 84;
@@ -119,7 +121,7 @@ function FastInjector({ initialFasting, initialOffsetH, hasLastFast = true, plan
     fastingReminder, setFastingReminder,
     weightReminder, setWeightReminder,
     waterGoal, setWaterGoal, waterLog, addWater, removeWaterAt, waterTotal, waterProgress,
-    startFast, endFast, resetFast,
+    startFast, endFast, resetFast, resumeFast,
     speed,
     history,
     lastFast,
@@ -218,7 +220,7 @@ function PhoneShell({ start, fixed }) {
       case 'history': return <HistoryScreen onNav={nav} />;
       case 'settings': return <SettingsScreen onNav={nav} onBack={() => setPage('home')} />;
       case 'plan-picker': return <PlanPickerScreen onBack={() => setPage('settings')} />;
-      case 'day-detail': return <DayDetailScreen dayKey={dayKey} onBack={() => setPage('progress')} />;
+      case 'day-detail': return <DayDetailScreen dayKey={dayKey} onNav={nav} onBack={() => setPage('progress')} />;
       case 'stages': return <StagesScreen onNav={nav} onBack={() => setPage('home')} />;
       case 'onboard-welcome': return <OnboardWelcomeScreen />;
       case 'onboard-plan': return <OnboardPlanScreen />;

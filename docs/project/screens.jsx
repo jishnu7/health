@@ -813,7 +813,7 @@ function HistoryScreen({ onNav }) {
 // Shows: hero with duration + chip, editable start/end times,
 // editable weight, delete option.
 // ─────────────────────────────────────────────────────────────
-function DayDetailScreen({ dayKey, onBack }) {
+function DayDetailScreen({ dayKey, onBack, onNav }) {
   const f = useFast();
   // Resolve the entry by timestamp; fall back to most recent.
   const entry = React.useMemo(() => {
@@ -860,56 +860,23 @@ function DayDetailScreen({ dayKey, onBack }) {
         left={<button className="fast-iconbtn" onClick={() => onBack && onBack()}><Icon.Back /></button>} />
       <div className="fast-content" style={{ paddingTop: 6 }}>
 
-        {/* Hero — duration + chip + bar */}
-        <div className="card" style={{ padding: 18 }}>
-          <div className="h-eyebrow">Fasting duration</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 8 }}>
-            <div className="h-display tnum" style={{ fontSize: 44 }}>
-              {dh}<span style={{ color: 'var(--muted)', fontSize: 22, marginLeft: 2 }}>h</span>
-              <span style={{ marginLeft: 10 }}>{String(dm).padStart(2, '0')}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 22, marginLeft: 2 }}>m</span>
-            </div>
-            {hit ? (
-              <span style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--primary)', background: 'var(--primary-soft)', padding: '5px 10px', borderRadius: 100, fontWeight: 600 }}>GOAL MET</span>
-            ) : (
-              <span style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--accent)', background: 'var(--accent-soft)', padding: '5px 10px', borderRadius: 100, fontWeight: 600 }}>SHORT</span>
-            )}
-          </div>
-          <div style={{ marginTop: 14, position: 'relative' }}>
-            {/* progress bar with goal tick */}
-            <div style={{ height: 8, borderRadius: 4, background: 'var(--border-2)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${Math.min(100, (duration / 24) * 100)}%`,
-                background: hit ? 'var(--primary)' : 'var(--accent)',
-                borderRadius: 4,
-                transition: 'width .2s ease',
-              }} />
-            </div>
-            <div style={{
-              position: 'absolute', top: -2, bottom: -2, left: `${(goalH / 24) * 100}%`,
-              width: 1.5, background: 'var(--ink)', opacity: 0.5,
-            }} />
-            <div style={{ position: 'absolute', top: 14, left: `${(goalH / 24) * 100}%`, transform: 'translateX(-50%)' }}>
-              <div className="caption tnum" style={{ fontSize: 10 }}>goal {goalH}h</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Fasting times */}
-        <SectionLabel>Fasting window</SectionLabel>
-        <div className="card" style={{ padding: '0 16px' }}>
-          <TimeRow label="Started" value={startTime} onChange={setStartTime} />
-          <TimeRow label="Ended" value={endTime} onChange={setEndTime} />
-          <div className="fast-row" style={{ padding: '18px 0' }}>
-            <div style={{ flex: 1 }}>
-              <div className="fast-row-label">Duration</div>
-              <div className="fast-row-sub">Auto-calculated</div>
-            </div>
-            <div className="tnum" style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-2)' }}>
-              {dh}h {String(dm).padStart(2, '0')}m
-            </div>
-          </div>
-        </div>
+        {/* Fast recap — same card used on the home screen, with editable times */}
+        {(() => {
+          const endMs = (() => { const e = new Date(entry.date); const [eh, em] = endTime.split(':').map(Number); e.setHours(eh, em, 0, 0); return e.getTime(); })();
+          const startMs = endMs - duration * 3600000;
+          return (
+            <>
+              <LastFastCard
+                fast={{ startMs, endMs, durationH: duration, goalH, planLabel: f.planObj.label }}
+                edit={{ start: startTime, end: endTime, onStart: setStartTime, onEnd: setEndTime }}
+                onShare={() => {}} />
+              <button className="btn btn-soft btn-full" style={{ marginTop: 12 }}
+                onClick={() => { f.resumeFast(startMs); onNav && onNav('home'); }}>
+                <Icon.Play /> Resume this fast
+              </button>
+            </>
+          );
+        })()}
 
         {/* Weight */}
         <SectionLabel>Weight</SectionLabel>

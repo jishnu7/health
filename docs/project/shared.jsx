@@ -586,9 +586,9 @@ function RingGlyph({ size = 15 }) {
 // duration, goal-met, the energy phases reached, start→end times,
 // and a subtle brand footer so a screenshot stands on its own.
 // ─────────────────────────────────────────────────────────────
-function LastFastCard({ onShare }) {
+function LastFastCard({ onShare, fast, edit }) {
   const f = useFast();
-  const lf = f.lastFast || {
+  const lf = fast || f.lastFast || {
     startMs: (() => { const e = new Date(); e.setHours(11, 47, 0, 0); return e.getTime() - 16.2 * 3600000; })(),
     endMs: (() => { const e = new Date(); e.setHours(11, 47, 0, 0); return e.getTime(); })(),
     durationH: 16.2,
@@ -658,7 +658,16 @@ function LastFastCard({ onShare }) {
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div className="caption">Started</div>
-            <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(start)}</div>
+            {edit ? (
+              <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 2, cursor: 'pointer' }}>
+                <span className="tnum" style={{ fontSize: 14, fontWeight: 500 }}>{fmtTime(start)}</span>
+                <Icon.Chevron style={{ width: 12, height: 12, color: 'var(--muted)', transform: 'rotate(90deg)' }} />
+                <input type="time" value={edit.start} onChange={(e) => e.target.value && edit.onStart(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer' }} />
+              </label>
+            ) : (
+              <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(start)}</div>
+            )}
           </div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--subtle)' }}>
             <div style={{ height: 1, background: 'var(--border)', flex: 1, maxWidth: 40 }} />
@@ -667,7 +676,16 @@ function LastFastCard({ onShare }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="caption">Ended</div>
-            <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(end)}</div>
+            {edit ? (
+              <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 2, cursor: 'pointer' }}>
+                <span className="tnum" style={{ fontSize: 14, fontWeight: 500 }}>{fmtTime(end)}</span>
+                <Icon.Chevron style={{ width: 12, height: 12, color: 'var(--muted)', transform: 'rotate(90deg)' }} />
+                <input type="time" value={edit.end} onChange={(e) => e.target.value && edit.onEnd(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer' }} />
+              </label>
+            ) : (
+              <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(end)}</div>
+            )}
           </div>
         </div>
 
