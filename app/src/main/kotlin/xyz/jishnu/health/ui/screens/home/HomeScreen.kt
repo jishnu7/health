@@ -516,22 +516,29 @@ private fun ActiveTopCard(
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 14.dp, end = 14.dp)
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(c.primarySoft)
-                .clickable(onClick = share),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                IntermIcons.Share,
-                contentDescription = "Share progress",
-                tint = c.primary,
-                modifier = Modifier.size(16.dp),
-            )
+        // Share only becomes available once the user has actually crossed
+        // into the 2nd metabolic stage — sharing a 30-minute "in progress"
+        // snapshot isn't meaningful, but once stage 2 lands there's a real
+        // milestone to share.
+        val phaseTwoStartH = state.stages.getOrNull(1)?.startHour ?: 4
+        if (state.elapsedHours >= phaseTwoStartH) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 14.dp, end = 14.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(c.primarySoft)
+                    .clickable(onClick = share),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    IntermIcons.Share,
+                    contentDescription = "Share progress",
+                    tint = c.primary,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
     }
 }
