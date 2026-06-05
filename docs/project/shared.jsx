@@ -102,6 +102,38 @@ function stageForHours(h) {
   return s;
 }
 
+// Short present-tense status line per metabolic stage (home energy card).
+const STAGE_MSG = {
+  fed:       'Digesting your last meal',
+  early:     'Insulin levels are falling',
+  glycogen:  'Burning through stored carbs',
+  shift:     'Switching over to fat for fuel',
+  burn:      'Running primarily on body fat',
+  ketosis:   'Ketones are rising',
+  deep:      'Fully fat-adapted',
+  autophagy: 'Cellular cleanup underway',
+};
+function nextStageForHours(h) { return STAGES.find((x) => x.start > h) || null; }
+
+// ─────────────────────────────────────────────────────────────
+// Energy-utilization phases — a simplified 4-phase lens over the
+// fast, used by the home-screen energy card. Hours are into the fast.
+// ─────────────────────────────────────────────────────────────
+const ENERGY_PHASES = [
+  { id: 'digest', label: 'Digesting',     start: 0,  end: 4,  msg: 'Digestion slowing' },
+  { id: 'glyco',  label: 'Glycogen',      start: 4,  end: 12, msg: 'Stored carbs powering your fast' },
+  { id: 'trans',  label: 'Transition',    start: 12, end: 16, msg: 'Stored energy usage increasing' },
+  { id: 'stored', label: 'Stored Energy', start: 16, end: 24, msg: 'High fat utilization phase' },
+];
+function energyPhaseForHours(h) {
+  let s = ENERGY_PHASES[0];
+  for (const x of ENERGY_PHASES) if (h >= x.start) s = x;
+  return s;
+}
+function nextEnergyPhase(h) {
+  return ENERGY_PHASES.find((x) => x.start > h) || null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Plans — common IF schedules
 // ─────────────────────────────────────────────────────────────
@@ -311,6 +343,11 @@ const Icon = {
       <path d="M7 5l12 7-12 7V5z"/>
     </svg>
   ),
+  Share: (p) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/>
+    </svg>
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -440,8 +477,307 @@ function StageDots({ stages, currentIdx }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Energy phase card (home screen) — the active energy-utilization
+// phase as a focus panel: tinted header + message, a 4-segment
+// ribbon, and a "next phase" countdown. Tappable to open Stages.
+// ─────────────────────────────────────────────────────────────
+function EnergyPhaseCard({ onOpen }) {
+  const f = useFast();
+  const h = f.elapsedH;
+  const act = stageForHours(h);
+  const nxt = nextStageForHours(h);
+  const svar = (id) => `var(--stage-${id})`;
+  const c = svar(act.id);
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  // Stage arcs across the 24h dial (autophagy begins at the 24h rim).
+  const segs = STAGES.filter((s) => s.start < 24).map((s, i, arr) => ({ ...s, end: arr[i + 1] ? arr[i + 1].start : 24 }));
+  const fmtHM = (hh) => {
+    const H = Math.floor(hh);
+    const M = Math.round((hh - H) * 60);
+    return M === 60 ? `${H + 1}h 00m` : `${H}h ${String(M).padStart(2, '0')}m`;
+  };
+  const Tag = onOpen ? 'button' : 'div';
+  return (
+    <Tag className="card" onClick={onOpen || undefined}
+      style={{ width: '100%', textAlign: 'left', padding: 0, overflow: 'hidden', display: 'block' }}>
+      {/* hero */}
+      <div style={{ padding: '18px 18px 16px', background: `color-mix(in srgb, ${c} 12%, var(--card))` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: c }} />
+            <span className="h-eyebrow" style={{ color: 'var(--ink-2)' }}>{act.name}</span>
+          </div>
+          {onOpen && <Icon.Chevron style={{ color: 'var(--muted)' }} />}
+        </div>
+        <div style={{ fontSize: 21, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 8, lineHeight: 1.2 }}>
+          {STAGE_MSG[act.id]}
+        </div>
+      </div>
+      {/* ribbon */}
+      <div style={{ padding: '14px 18px 16px' }}>
+        <div style={{ display: 'flex', gap: 3, height: 8 }}>
+          {segs.map((s) => {
+            const sc = svar(s.id);
+            const fill = clamp01((h - s.start) / (s.end - s.start));
+            return (
+              <div key={s.id} style={{ flexGrow: s.end - s.start, position: 'relative', borderRadius: 4, overflow: 'hidden', background: `color-mix(in oklab, ${sc} 18%, transparent)` }}>
+                <div style={{ position: 'absolute', inset: 0, width: (fill * 100) + '%', background: sc, borderRadius: 4, transition: 'width .4s ease' }} />
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="caption">
+            {nxt
+              ? <>Next: <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>{nxt.name}</span></>
+              : <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>Deepest stage reached</span>}
+          </span>
+          {nxt && <span className="mono tnum" style={{ fontSize: 13, fontWeight: 500, color: c, whiteSpace: 'nowrap' }}>in {fmtHM(nxt.start - h)}</span>}
+        </div>
+      </div>
+    </Tag>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Stages preview card (home, not fasting) — tinted teaser that
+// opens the metabolic stages page on tap. Mirrors the fasting card.
+// ─────────────────────────────────────────────────────────────
+function StagesPreviewCard({ onOpen }) {
+  const svar = (id) => `var(--stage-${id})`;
+  const segs = STAGES.filter((s) => s.start < 24).map((s, i, arr) => ({ ...s, end: arr[i + 1] ? arr[i + 1].start : 24 }));
+  return (
+    <button className="card" onClick={onOpen || undefined}
+      style={{ width: '100%', textAlign: 'left', padding: 0, overflow: 'hidden', display: 'block' }}>
+      <div style={{ padding: '16px 18px 14px', background: 'color-mix(in srgb, var(--primary) 10%, var(--card))' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span className="h-eyebrow" style={{ color: 'var(--ink-2)' }}>Metabolic stages</span>
+          <Icon.Chevron style={{ color: 'var(--muted)' }} />
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', marginTop: 6 }}>Preview the journey ahead</div>
+      </div>
+      <div style={{ padding: '14px 18px 16px' }}>
+        <div style={{ display: 'flex', gap: 3, height: 8 }}>
+          {segs.map((s) => (
+            <div key={s.id} style={{ flexGrow: s.end - s.start, height: '100%', borderRadius: 4, background: svar(s.id), opacity: 0.9 }} />
+          ))}
+        </div>
+        <div className="caption" style={{ marginTop: 10 }}>Eight stages, from fed to deep ketosis &amp; autophagy.</div>
+      </div>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Brand glyph — tiny ring + dot, for share/footer contexts
+// ─────────────────────────────────────────────────────────────
+function RingGlyph({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="var(--primary)" strokeWidth="3" />
+      <circle cx="12" cy="3.5" r="2.4" fill="var(--accent)" />
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Last-fast recap card (home, not-fasting) — a shareable summary:
+// duration, goal-met, the energy phases reached, start→end times,
+// and a subtle brand footer so a screenshot stands on its own.
+// ─────────────────────────────────────────────────────────────
+function LastFastCard({ onShare }) {
+  const f = useFast();
+  const lf = f.lastFast || {
+    startMs: (() => { const e = new Date(); e.setHours(11, 47, 0, 0); return e.getTime() - 16.2 * 3600000; })(),
+    endMs: (() => { const e = new Date(); e.setHours(11, 47, 0, 0); return e.getTime(); })(),
+    durationH: 16.2,
+    goalH: (f.planObj && f.planObj.fast) || 16,
+    planLabel: (f.planObj && f.planObj.label) || '16:8',
+  };
+
+  const start = new Date(lf.startMs);
+  const end = new Date(lf.endMs);
+  const durH = lf.durationH;
+  const H = Math.floor(durH);
+  const M = Math.round((durH - H) * 60);
+  const pct = Math.round((durH / lf.goalH) * 100);
+  const goalMet = durH >= lf.goalH;
+  const reached = stageForHours(durH);
+  const scvar = (id) => `var(--stage-${id})`;
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  // Stage arcs across the 24h dial (autophagy begins at the 24h rim).
+  const segs = STAGES.filter((s) => s.start < 24).map((s, i, arr) => ({ ...s, end: arr[i + 1] ? arr[i + 1].start : 24 }));
+
+  const now = new Date();
+  const dayLabel = end.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* header band */}
+      <div style={{ padding: '18px 18px 16px', background: 'color-mix(in srgb, var(--primary) 10%, var(--card))' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="h-eyebrow" style={{ color: 'var(--muted)' }}>{dayLabel}</div>
+          <button className="fast-iconbtn" style={{ width: 34, height: 34, color: 'var(--primary)' }}
+            onClick={onShare || undefined}><Icon.Share style={{ width: 17, height: 17 }} /></button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: 10 }}>
+          <span className="mono" style={{ fontSize: 42, fontWeight: 400, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--primary)' }}>
+            {H}<span style={{ fontSize: 22, color: 'var(--primary-2)' }}>h</span> {String(M).padStart(2, '0')}<span style={{ fontSize: 22, color: 'var(--primary-2)' }}>m</span>
+          </span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px', borderRadius: 999, background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 12, fontWeight: 500 }}>
+            {goalMet && <Icon.Check style={{ width: 14, height: 14 }} />}
+            {lf.planLabel} · {goalMet ? 'Goal reached' : pct + '% of goal'}
+          </span>
+        </div>
+      </div>
+
+      {/* body */}
+      <div style={{ padding: '14px 18px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <span className="h-eyebrow">Stage reached</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>
+            <span style={{ width: 7, height: 7, borderRadius: 4, background: scvar(reached.id) }} />
+            {reached.name}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 3, height: 8 }}>
+          {segs.map((s) => {
+            const c = scvar(s.id);
+            const fill = clamp01((durH - s.start) / (s.end - s.start));
+            return (
+              <div key={s.id} style={{ flexGrow: s.end - s.start, position: 'relative', borderRadius: 4, overflow: 'hidden', background: `color-mix(in oklab, ${c} 18%, transparent)` }}>
+                <div style={{ position: 'absolute', inset: 0, width: (fill * 100) + '%', background: c, borderRadius: 4 }} />
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div className="caption">Started</div>
+            <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(start)}</div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--subtle)' }}>
+            <div style={{ height: 1, background: 'var(--border)', flex: 1, maxWidth: 40 }} />
+            <Icon.Chevron style={{ width: 13, height: 13 }} />
+            <div style={{ height: 1, background: 'var(--border)', flex: 1, maxWidth: 40 }} />
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div className="caption">Ended</div>
+            <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{fmtTime(end)}</div>
+          </div>
+        </div>
+
+        {/* brand footer for share */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, opacity: 0.55 }}>
+          <RingGlyph size={14} />
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '-0.01em' }}>Fast</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Weight trend card (weight screen) — weekly low–high range bands
+// with the weekly-average trend line. Distinct from the Progress
+// page's dual-axis line chart.
+// ─────────────────────────────────────────────────────────────
+function WeightTrendCard({ weeks = 8 }) {
+  const f = useFast();
+  const units = f.units;
+  const toDisp = (x) => units === 'metric' ? x * 0.45359237 : x;
+  const unit = units === 'metric' ? 'kg' : 'lb';
+  const hist = f.history.slice(-weeks * 7).map((d) => ({ date: d.date, weight: toDisp(d.weight) }));
+  const last = hist[hist.length - 1].weight;
+  const change = last - hist[0].weight;
+
+  const smooth = (pts) => {
+    if (pts.length < 2) return pts.length ? `M ${pts[0].x} ${pts[0].y}` : '';
+    const d = [`M ${pts[0].x} ${pts[0].y}`];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+      d.push(`C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`);
+    }
+    return d.join(' ');
+  };
+  const fmtDay = (dt) => dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const W = 336, H = 180, PAD = { t: 12, r: 12, b: 22, l: 30 };
+  const iW = W - PAD.l - PAD.r, iH = H - PAD.t - PAD.b;
+  const weekData = [];
+  for (let i = 0; i < hist.length; i += 7) {
+    const chunk = hist.slice(i, i + 7);
+    if (!chunk.length) continue;
+    const ws = chunk.map((d) => d.weight);
+    weekData.push({ min: Math.min(...ws), max: Math.max(...ws), avg: ws.reduce((a, b) => a + b, 0) / ws.length, date: chunk[0].date });
+  }
+  const allLo = Math.min(...weekData.map((w) => w.min)) - 1;
+  const allHi = Math.max(...weekData.map((w) => w.max)) + 1;
+  const yAt = (v) => PAD.t + (1 - (v - allLo) / (allHi - allLo)) * iH;
+  const n = weekData.length;
+  const slot = iW / n;
+  const bw = Math.min(16, slot * 0.5);
+  const cx = (i) => PAD.l + slot * (i + 0.5);
+  const avgPts = weekData.map((w, i) => ({ x: cx(i), y: yAt(w.avg) }));
+  const ticks = 3;
+  const tickVals = Array.from({ length: ticks + 1 }, (_, i) => allLo + (allHi - allLo) * (i / ticks));
+
+  return (
+    <div className="card" style={{ padding: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <div className="h-eyebrow">Weight trend</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
+            <span className="h-display tnum" style={{ fontSize: 30 }}>{last.toFixed(1)}</span>
+            <span style={{ fontSize: 15, color: 'var(--muted)' }}>{unit}</span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="caption">{weeks}-week change</div>
+          <div className="tnum" style={{ fontSize: 15, fontWeight: 500, marginTop: 4, color: change < 0 ? 'var(--primary)' : 'var(--accent)' }}>
+            {change < 0 ? '−' : '+'}{Math.abs(change).toFixed(1)} {unit}
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+          {tickVals.map((v, i) => (
+            <g key={i}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={yAt(v)} y2={yAt(v)} stroke="var(--border)" strokeWidth="1" strokeDasharray={i === ticks ? '0' : '2 4'} />
+              <text x={PAD.l - 6} y={yAt(v) + 3} fontSize="9" fill="var(--muted)" textAnchor="end" fontFamily="Geist Mono">{v.toFixed(0)}</text>
+            </g>
+          ))}
+          {weekData.map((w, i) => (
+            <rect key={i} x={cx(i) - bw / 2} y={yAt(w.max)} width={bw} height={Math.max(2, yAt(w.min) - yAt(w.max))} rx={bw / 2} fill="var(--primary)" opacity="0.16" />
+          ))}
+          <path d={smooth(avgPts)} fill="none" stroke="var(--primary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          {avgPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.2" fill="var(--card)" stroke="var(--primary)" strokeWidth="2" />)}
+          {weekData.map((w, i) => (i % 2 === 0 || n <= 6) ? <text key={i} x={cx(i)} y={H - 6} fontSize="9" fill="var(--muted)" textAnchor="middle" fontFamily="Geist Mono">{fmtDay(w.date)}</text> : null)}
+        </svg>
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <span className="caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 12, height: 10, borderRadius: 3, background: 'var(--primary)', opacity: 0.16 }} /> Weekly range
+        </span>
+        <span className="caption" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 16, height: 2, borderRadius: 2, background: 'var(--primary)' }} /> Average
+        </span>
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   STAGES, PLANS, stageForHours,
+  ENERGY_PHASES, energyPhaseForHours, nextEnergyPhase, EnergyPhaseCard,
+  STAGE_MSG, nextStageForHours, StagesPreviewCard,
+  RingGlyph, LastFastCard, WeightTrendCard,
   FastCtx, FastProvider, useFast,
   Icon, fmtDuration, fmtTime, fmtDate, lbToKg, fmtWeight, mlToOz, ozToMl, fmtWater, WATER_PRESETS, addHoursToTime, diffHoursTime,
   FastHeader, BottomNav, ProgressRing, StageDots,

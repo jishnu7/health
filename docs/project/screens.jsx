@@ -209,41 +209,92 @@ function HomeScreen({ onNav, onShowStages }) {
   const startedAt = new Date(f.fastStartMs);
   const goalAt = new Date(f.fastStartMs + f.goalH * 3600000);
 
+  // Scheduled fast window (from the start time set in settings).
+  const hhmmToDate = (s) => { const [hh, mm] = s.split(':').map(Number); const dt = new Date(); dt.setHours(hh, mm, 0, 0); return dt; };
+  const planStartClock = fmtTime(hhmmToDate(f.fastStartTime));
+  const planGoalClock = fmtTime(hhmmToDate(addHoursToTime(f.fastStartTime, f.goalH)));
+
   if (!f.isFasting) {
+    // No completed fast yet — ready-to-start state.
+    if (!f.lastFast) {
+      return (
+        <div className="fast-screen">
+          <FastHeader title="Fast" right={<button className="fast-iconbtn" onClick={() => onNav && onNav('settings')}><Icon.Settings /></button>} />
+          <div className="fast-content" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+            <div>
+              <div className="h-eyebrow" style={{ marginBottom: 8 }}>Not fasting</div>
+              <h1 className="h-title">Begin your first fast.</h1>
+              <p className="body" style={{ marginTop: 8 }}>
+                We'll track every metabolic stage as you go — from fed to deep ketosis.
+              </p>
+            </div>
+
+            <div className="card" style={{ width: '100%', padding: '30px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <ProgressRing size={240} stroke={12} progress={0} color="var(--primary)" dashed={true}>
+                <div className="h-eyebrow">Goal</div>
+                <div className="h-display" style={{ marginTop: 6, fontSize: 48 }}>{f.goalH}h</div>
+                <div className="caption" style={{ marginTop: 6 }}>{f.planObj.label} Plan</div>
+              </ProgressRing>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+                <div>
+                  <div className="caption">Starts</div>
+                  <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planStartClock}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="caption">Goal</div>
+                  <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planGoalClock}</div>
+                </div>
+              </div>
+
+              <div style={{ width: '100%', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+                <button className="btn btn-primary btn-full" onClick={() => f.startFast()}>
+                  <Icon.Play /> Start fasting
+                </button>
+              </div>
+            </div>
+
+            <StagesPreviewCard onOpen={() => onShowStages && onShowStages()} />
+          </div>
+          <BottomNav active="home" onChange={onNav} />
+        </div>
+      );
+    }
+
+    // Returning — show the last-fast recap.
     return (
       <div className="fast-screen">
         <FastHeader title="Fast" right={<button className="fast-iconbtn" onClick={() => onNav && onNav('settings')}><Icon.Settings /></button>} />
-        <div className="fast-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, paddingTop: 28 }}>
-          <div style={{ textAlign: 'center' }}>
+        <div className="fast-content" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+          <div>
             <div className="h-eyebrow" style={{ marginBottom: 8 }}>Not fasting</div>
-            <h1 className="h-title">Ready when you are.</h1>
-            <p className="body" style={{ marginTop: 10, maxWidth: 280 }}>
-              Start a {f.planObj.label} fast. We'll track your progress through each metabolic phase.
+            <h1 className="h-title">Nice work.</h1>
+            <p className="body" style={{ marginTop: 8 }}>
+              Here's your last fast. Start another {f.planObj.label} whenever you're ready.
             </p>
           </div>
 
-          <ProgressRing size={240} stroke={12} progress={0} color="var(--primary)" dashed={true}>
-            <div className="h-eyebrow">Goal</div>
-            <div className="h-display" style={{ marginTop: 6, fontSize: 48 }}>{f.goalH}h</div>
-            <div className="caption" style={{ marginTop: 6 }}>{f.planObj.label} · {f.planObj.sub}</div>
-          </ProgressRing>
+          <LastFastCard onShare={() => {}} />
 
-          <button className="btn btn-primary btn-full" onClick={() => f.startFast()}>
-            <Icon.Play /> Start fasting
-          </button>
-
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <button className="btn btn-ghost" style={{ flex: 1, height: 44, fontSize: 13 }} onClick={() => onNav && onNav('weight')}>
-              <Icon.Scale /> Log weight
-            </button>
-            <button className="btn btn-ghost" style={{ flex: 1, height: 44, fontSize: 13 }} onClick={() => onNav && onNav('settings')}>
-              Change plan
-            </button>
+          <div className="card" style={{ width: '100%', padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <div className="caption">Starts</div>
+                <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planStartClock}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="caption">Goal</div>
+                <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planGoalClock}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-primary btn-full" onClick={() => f.startFast()}>
+                <Icon.Play /> Start next fast
+              </button>
+            </div>
           </div>
 
-          <div className="caption" style={{ marginTop: 4 }}>
-            Last fast ended yesterday · 16h 12m
-          </div>
+          <StagesPreviewCard onOpen={() => onShowStages && onShowStages()} />
         </div>
         <BottomNav active="home" onChange={onNav} />
       </div>
@@ -254,64 +305,56 @@ function HomeScreen({ onNav, onShowStages }) {
   return (
     <div className="fast-screen">
       <FastHeader title="Fast" right={<button className="fast-iconbtn" onClick={() => onNav && onNav('settings')}><Icon.Settings /></button>} />
-      <div className="fast-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, paddingTop: 12 }}>
+      <div className="fast-content" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="fast-stage-chip">
-            <span className="fast-stage-dot" />
-            Stage {f.stageIdx + 1} of {f.stages.length} · {f.stage.name}
-          </span>
+        <div>
+          <div className="h-eyebrow" style={{ marginBottom: 8 }}>Fasting · {f.planObj.label}</div>
+          <h1 className="h-title">Keep it going.</h1>
+          <p className="body" style={{ marginTop: 8 }}>
+            You're {Math.round(f.progress * 100)}% of the way to your {f.goalH}-hour goal — keep it steady.
+          </p>
         </div>
 
-        <ProgressRing size={250} stroke={12} progress={f.progress}>
-          <div className="h-eyebrow">Elapsed</div>
-          <div className="h-display tnum" style={{ marginTop: 4 }}>
-            {d.hh}<span style={{ color: 'var(--muted)' }}>:</span>{d.mm}
-          </div>
-          <div className="caption tnum" style={{ marginTop: 4 }}>
-            {d.ss}s · {Math.round(f.progress * 100)}% of {f.goalH}h
-          </div>
-        </ProgressRing>
+        <div className="card" style={{ width: '100%', padding: '24px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <ProgressRing size={250} stroke={12} progress={f.progress}>
+            <div className="h-eyebrow">Elapsed</div>
+            <div className="h-display tnum" style={{ marginTop: 4 }}>
+              {d.hh}<span style={{ color: 'var(--muted)' }}>:</span>{d.mm}
+            </div>
+            <div className="caption tnum" style={{ marginTop: 4 }}>
+              {d.ss}s · {Math.round(f.progress * 100)}% of {f.goalH}h
+            </div>
+          </ProgressRing>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '0 12px' }}>
-          <div>
-            <div className="caption">Started</div>
-            <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">{fmtTime(startedAt)}</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div className="caption">Remaining</div>
-            <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">
-              {dr.h}h {dr.mm}m
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <div>
+              <div className="caption">Started</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">{fmtTime(startedAt)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div className="caption">Remaining</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">
+                {dr.h}h {dr.mm}m
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="caption">Goal</div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">{fmtTime(goalAt)}</div>
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div className="caption">Goal</div>
-            <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }} className="tnum">{fmtTime(goalAt)}</div>
+
+          <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-soft" style={{ flex: 1 }} onClick={() => f.endFast()}>
+              <Icon.Stop /> End fast
+            </button>
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => f.resetFast()}>
+              <Icon.Food /> I ate
+            </button>
           </div>
         </div>
 
         <div style={{ width: '100%' }}>
-          <StageDots stages={f.stages} currentIdx={f.stageIdx} />
-        </div>
-
-        {/* Current stage card */}
-        <button className="card" style={{ width: '100%', textAlign: 'left', padding: 16 }}
-          onClick={() => onShowStages && onShowStages()}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div className="h-eyebrow">Current stage</div>
-            <Icon.Chevron style={{ color: 'var(--muted)' }} />
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>{f.stage.title}</div>
-          <div className="body" style={{ marginTop: 6 }}>{f.stage.body}</div>
-        </button>
-
-        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-          <button className="btn btn-soft" style={{ flex: 1 }} onClick={() => f.endFast()}>
-            <Icon.Stop /> End fast
-          </button>
-          <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => f.resetFast()}>
-            <Icon.Food /> I ate
-          </button>
+          <EnergyPhaseCard onOpen={() => onShowStages && onShowStages()} />
         </div>
 
       </div>
@@ -386,18 +429,17 @@ function WeightScreen({ onNav }) {
               </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ marginTop: 20 }}>
-          <div className="h-eyebrow" style={{ marginBottom: 10 }}>Notes (optional)</div>
-          <div className="card" style={{ padding: 14, color: 'var(--muted)', fontSize: 14 }}>
-            Tap to add a note about today…
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <button className="btn btn-primary btn-full" onClick={() => onNav && onNav('home')}>
+              <Icon.Check /> Save weight
+            </button>
           </div>
         </div>
 
-        <button className="btn btn-primary btn-full" style={{ marginTop: 22 }} onClick={() => onNav && onNav('home')}>
-          <Icon.Check /> Save entry
-        </button>
+        <div style={{ marginTop: 20 }}>
+          <WeightTrendCard weeks={8} />
+        </div>
       </div>
       <BottomNav active="weight" onChange={onNav} />
     </div>

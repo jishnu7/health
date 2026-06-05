@@ -31,6 +31,22 @@ html, body {
   --danger:     #b54734;
   --warn:       #c69142;
 
+  /* Energy-utilization phases — warm (food) → cool (fat) */
+  --energy-digest: #d97757;
+  --energy-glyco:  #bf8638;
+  --energy-trans:  #5f7d4a;
+  --energy-stored: #2a4d3e;
+
+  /* Metabolic stages — hue-based, muted (warm fed → cool ketosis) */
+  --stage-fed:       oklch(0.56 0.105 18);
+  --stage-early:     oklch(0.56 0.105 32);
+  --stage-glycogen:  oklch(0.56 0.105 54);
+  --stage-shift:     oklch(0.56 0.105 96);
+  --stage-burn:      oklch(0.56 0.105 140);
+  --stage-ketosis:   oklch(0.56 0.105 162);
+  --stage-deep:      oklch(0.56 0.105 188);
+  --stage-autophagy: oklch(0.56 0.105 220);
+
   background: var(--bg);
   color: var(--ink);
   font-feature-settings: "ss01", "cv11";
@@ -53,6 +69,20 @@ html, body {
   --accent-soft: #2e211b;
   --danger:     #e87164;
   --warn:       #d9a35a;
+
+  --energy-digest: #e89074;
+  --energy-glyco:  #d9a35a;
+  --energy-trans:  #8bb070;
+  --energy-stored: #7dd3a8;
+
+  --stage-fed:       oklch(0.75 0.11 18);
+  --stage-early:     oklch(0.75 0.11 32);
+  --stage-glycogen:  oklch(0.75 0.11 54);
+  --stage-shift:     oklch(0.75 0.11 96);
+  --stage-burn:      oklch(0.75 0.11 140);
+  --stage-ketosis:   oklch(0.75 0.11 162);
+  --stage-deep:      oklch(0.75 0.11 188);
+  --stage-autophagy: oklch(0.75 0.11 220);
 }
 
 .fast-app .mono { font-family: 'Geist Mono', ui-monospace, monospace; }

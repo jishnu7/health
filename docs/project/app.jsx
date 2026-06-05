@@ -10,12 +10,13 @@ function DefaultsProvider({ children, value }) {
 
 // Re-wrap FastProvider so it accepts initial overrides for isFasting + start offset.
 // We do this with a thin wrapper that injects state via key prop changes.
-function ScopedFastProvider({ initialFasting = true, initialOffsetH = 14.4, children }) {
+function ScopedFastProvider({ initialFasting = true, initialOffsetH = 14.4, hasLastFast = true, children }) {
   const defaults = React.useContext(DefaultsCtx) || {};
   return (
     <FastInjector
       initialFasting={initialFasting}
       initialOffsetH={initialOffsetH}
+      hasLastFast={hasLastFast}
       plan={defaults.plan}
       units={defaults.units}
       speed={defaults.speed}>
@@ -27,7 +28,7 @@ function ScopedFastProvider({ initialFasting = true, initialOffsetH = 14.4, chil
 // This wraps FastProvider but provides initial overrides.
 // FastProvider already has its own useState defaults; we override here by re-mounting if key state changes externally.
 // Simpler: we shadow it with our own state, then provide context.
-function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units: defaultUnits, speed: defaultSpeed, children }) {
+function FastInjector({ initialFasting, initialOffsetH, hasLastFast = true, plan: defaultPlan, units: defaultUnits, speed: defaultSpeed, children }) {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 1000);
@@ -78,7 +79,7 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
   const resetFast = () => { setFastStartMs(Date.now()); setIsFasting(true); };
 
   const history = React.useMemo(() => {
-    const days = 14;
+    const days = 84;
     const out = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -87,7 +88,7 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today.getTime() - i * 86400000);
       const baseFast = 15 + Math.sin(i / 2) * 2 + rnd() * 1.5;
-      const baseWeight = 178.4 - i * 0.18 + (rnd() - 0.5) * 1.2;
+      const baseWeight = 172 + i * 0.16 + (rnd() - 0.5) * 1.4;
       const baseWater = 2000 + rnd() * 1000;
       out.push({
         date: d,
@@ -98,6 +99,15 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
     }
     return out;
   }, []);
+
+  // A representative most-recent completed fast (for the home recap card).
+  // First-run installs have none yet.
+  const lastFast = React.useMemo(() => {
+    if (!hasLastFast) return null;
+    const end = new Date(); end.setHours(11, 47, 0, 0);
+    const durationH = 16.2;
+    return { startMs: end.getTime() - durationH * 3600000, endMs: end.getTime(), durationH, goalH: 16, planLabel: '16:8' };
+  }, [hasLastFast]);
 
   const api = {
     isFasting, fastStartMs, elapsedMs, elapsedH, goalH, progress,
@@ -112,6 +122,7 @@ function FastInjector({ initialFasting, initialOffsetH, plan: defaultPlan, units
     startFast, endFast, resetFast,
     speed,
     history,
+    lastFast,
   };
 
   return <FastCtx.Provider value={api}>{children}</FastCtx.Provider>;
@@ -176,10 +187,10 @@ function Frame({ dark = false, children }) {
 // Each Phone gets its own ScopedFastProvider so its fasting state is
 // independent (lets us show "active" + "inactive" home side by side).
 // ─────────────────────────────────────────────────────────────
-function Phone({ start = 'home', isFasting = true, offsetH = 14.4, dark = false, fixed = null }) {
+function Phone({ start = 'home', isFasting = true, offsetH = 14.4, dark = false, fixed = null, hasLastFast = true }) {
   return (
     <Frame dark={dark}>
-      <ScopedFastProvider initialFasting={isFasting} initialOffsetH={offsetH}>
+      <ScopedFastProvider initialFasting={isFasting} initialOffsetH={offsetH} hasLastFast={hasLastFast}>
         <PhoneShell start={start} fixed={fixed} />
       </ScopedFastProvider>
     </Frame>
@@ -250,11 +261,14 @@ function App() {
   return (
     <DefaultsProvider value={defaults}>
       <DesignCanvas>
-        <DCSection id="home" title="Home" subtitle="The main screen, in two states. Tap Start/End to switch.">
+        <DCSection id="home" title="Home" subtitle="The main screen across its states. Tap Start/End to switch.">
+          <DCArtboard id="home-firstrun" label="Home · First run (no last fast)" width={412} height={892}>
+            <Phone start="home" isFasting={false} offsetH={0} dark={t.dark} hasLastFast={false} />
+          </DCArtboard>
           <DCArtboard id="home-active" label="Home · Fasting active" width={412} height={892}>
             <Phone start="home" isFasting={true} offsetH={14.4} dark={t.dark} />
           </DCArtboard>
-          <DCArtboard id="home-inactive" label="Home · Not fasting" width={412} height={892}>
+          <DCArtboard id="home-inactive" label="Home · Not fasting (returning)" width={412} height={892}>
             <Phone start="home" isFasting={false} offsetH={0} dark={t.dark} />
           </DCArtboard>
           <DCArtboard id="stages-detail" label="Stages · Tap current stage card" width={412} height={892}>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fast — Play Store Feature Graphic</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { background: #ecebe6; margin: 0; }
+
+  .fg {
+    --paper:      #f6f3ee;
+    --paper2:     #f7e7df;
+    --ink:        #14130f;
+    --ink-2:      #3a3a36;
+    --muted:      #6f6a60;
+    --primary:    #2a4d3e;
+    --primary2:   #3d6b56;
+    --accent:     #d97757;
+    --cream:      #fdfbf7;
+    --border:     #e1dccf;
+
+    width: 1024px;
+    height: 500px;
+    overflow: hidden;
+    position: relative;
+    font-family: 'Geist', -apple-system, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .fg .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .fg .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Phone bezel — smaller for 500px tall canvas */
+  .fg-phone {
+    width: 200px;
+    height: 410px;
+    background: #0d0c0a;
+    border-radius: 32px;
+    padding: 7px;
+    box-shadow:
+      0 24px 50px -18px rgba(20,19,15,0.42),
+      0 8px 16px -4px rgba(20,19,15,0.24),
+      0 0 0 1px rgba(20,19,15,0.06);
+    position: relative;
+  }
+  .fg-phone .screen {
+    width: 100%; height: 100%;
+    border-radius: 26px;
+    overflow: hidden;
+    background: var(--paper);
+    position: relative;
+  }
+  .fg-phone .notch {
+    position: absolute; top: 10px; left: 50%;
+    transform: translateX(-50%);
+    width: 60px; height: 16px;
+    background: #0d0c0a;
+    border-radius: 999px;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="feature-graphic.jsx"></script>
+</body>
+</html>

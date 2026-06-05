@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Fast — App Icon</title>
+  <rect width="1024" height="1024" fill="#14130f"></rect>
+  <g opacity="0.5">
+    <line x1="512.00" y1="136.00" x2="512.00" y2="108.00" stroke="#fdfbf7" stroke-width="9" stroke-linecap="round"></line>
+    <line x1="609.32" y1="148.81" x2="612.94" y2="135.29" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="700.00" y1="186.37" x2="707.00" y2="174.25" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="777.87" y1="246.13" x2="787.77" y2="236.23" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="837.63" y1="324.00" x2="849.75" y2="317.00" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="875.19" y1="414.68" x2="888.71" y2="411.06" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="888.00" y1="512.00" x2="916.00" y2="512.00" stroke="#fdfbf7" stroke-width="9" stroke-linecap="round"></line>
+    <line x1="875.19" y1="609.32" x2="888.71" y2="612.94" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="837.63" y1="700.00" x2="849.75" y2="707.00" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="777.87" y1="777.87" x2="787.77" y2="787.77" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="700.00" y1="837.63" x2="707.00" y2="849.75" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="609.32" y1="875.19" x2="612.94" y2="888.71" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="512.00" y1="888.00" x2="512.00" y2="916.00" stroke="#fdfbf7" stroke-width="9" stroke-linecap="round"></line>
+    <line x1="414.68" y1="875.19" x2="411.06" y2="888.71" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="324.00" y1="837.63" x2="317.00" y2="849.75" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="246.13" y1="777.87" x2="236.23" y2="787.77" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="186.37" y1="700.00" x2="174.25" y2="707.00" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="148.81" y1="609.32" x2="135.29" y2="612.94" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="136.00" y1="512.00" x2="108.00" y2="512.00" stroke="#fdfbf7" stroke-width="9" stroke-linecap="round"></line>
+    <line x1="148.81" y1="414.68" x2="135.29" y2="411.06" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="186.37" y1="324.00" x2="174.25" y2="317.00" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="246.13" y1="246.13" x2="236.23" y2="236.23" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="324.00" y1="186.37" x2="317.00" y2="174.25" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+    <line x1="414.68" y1="148.81" x2="411.06" y2="135.29" stroke="#fdfbf7" stroke-width="4" stroke-linecap="round"></line>
+  </g>
+  <circle cx="512" cy="512" r="320" fill="none" stroke="#fdfbf7" stroke-width="80"></circle>
+  <circle cx="207.66" cy="610.89" r="58" fill="#d97757"></circle>
+</svg>
