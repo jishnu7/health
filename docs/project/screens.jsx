@@ -277,20 +277,18 @@ function HomeScreen({ onNav, onShowStages }) {
           <LastFastCard onShare={() => {}} />
 
           <div className="card" style={{ width: '100%', padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div className="caption">Starts</div>
-                <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planStartClock}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div className="caption">Goal</div>
-                <div className="tnum" style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{planGoalClock}</div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <div className="h-eyebrow">Next fast</div>
+              <span className="h-display tnum" style={{ fontSize: 26 }}>{f.goalH}h</span>
             </div>
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-              <button className="btn btn-primary btn-full" onClick={() => f.startFast()}>
-                <Icon.Play /> Start next fast
-              </button>
+            <div className="body" style={{ marginTop: 6, color: 'var(--muted)' }}>
+              {f.goalH}-hour fast, {24 - f.goalH}-hour eating window.
+            </div>
+            <button className="btn btn-primary btn-full" style={{ marginTop: 16 }} onClick={() => f.startFast()}>
+              <Icon.Play /> Start fasting now
+            </button>
+            <div className="caption" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+              <Icon.Clock style={{ width: 13, height: 13 }} /> Usual window · {planStartClock} – {planGoalClock}
             </div>
           </div>
 
