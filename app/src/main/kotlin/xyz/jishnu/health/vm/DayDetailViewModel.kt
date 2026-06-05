@@ -44,9 +44,18 @@ data class DayDetailUiState(
     val daySessions: List<FastingSessionEntity> = emptyList(),
     val waterMl: Int = 0,
     val waterGoalMl: Int = 2500,
+    /**
+     * Calendar day the start instant lives on. For overnight ongoing fasts
+     * (started yesterday, still running today) this is the previous day; the
+     * dayKey ([date]) is the end day. Both are needed so the duration
+     * calculation in this VM matches what [FastingViewModel] shows on Home.
+     */
+    val startDate: LocalDate? = null,
 ) {
     private val startInstantMs: Long?
-        get() = startTime?.let { date.atTime(TimeMath.parseTime(it)).atZone(zone).toInstant().toEpochMilli() }
+        get() = startTime?.let {
+            (startDate ?: date).atTime(TimeMath.parseTime(it)).atZone(zone).toInstant().toEpochMilli()
+        }
 
     val durationHours: Double = when {
         startTime == null -> 0.0
@@ -130,10 +139,12 @@ class DayDetailViewModel @Inject constructor(
         val startStr: String?
         val endStr: String?
         val isOngoing: Boolean
+        val startDate: LocalDate?
 
         if (session != null) {
-            val startLt = Instant.ofEpochMilli(session.startMs).atZone(zone).toLocalTime()
-            startStr = fmtLt(startLt)
+            val startZdt = Instant.ofEpochMilli(session.startMs).atZone(zone)
+            startStr = fmtLt(startZdt.toLocalTime())
+            startDate = startZdt.toLocalDate()
             if (session.endMs != null) {
                 val endLt = Instant.ofEpochMilli(session.endMs).atZone(zone).toLocalTime()
                 endStr = fmtLt(endLt)
@@ -146,6 +157,7 @@ class DayDetailViewModel @Inject constructor(
             startStr = null
             endStr = null
             isOngoing = false
+            startDate = null
         }
 
         _state.value = DayDetailUiState(
@@ -167,10 +179,19 @@ class DayDetailViewModel @Inject constructor(
             daySessions = sessions,
             waterMl = waterMl,
             waterGoalMl = settings.waterGoalMl,
+            startDate = startDate,
         )
     }
 
-    fun setStart(hhmm: String) { _state.update { it.copy(startTime = hhmm) } }
+    fun setStart(hhmm: String) {
+        _state.update { s ->
+            // First time the user picks a start, anchor the start to dayKey's
+            // date. For existing sessions we keep whatever startDate load()
+            // captured so an overnight ongoing fast doesn't "jump" forward.
+            val date = s.startDate ?: s.date
+            s.copy(startTime = hhmm, startDate = date)
+        }
+    }
 
     fun setEnd(hhmm: String) {
         _state.update { it.copy(endTime = hhmm, isOngoing = false) }
@@ -198,13 +219,15 @@ class DayDetailViewModel @Inject constructor(
             //   - completed + same-day: start is on s.date
             //   - ongoing: keep the existing session's start date (we have no way
             //     to pick a date when there's no end), just swap the HH:mm portion
+            // Prefer the start date carried in state (set by load() from the
+            // session's real startMs, or by setStart() when the user picks one
+            // for a brand-new entry). Fall back to inferring overnight from
+            // HH:mm wraparound when state didn't carry a date.
             val startInstant: Long = when {
+                s.startDate != null ->
+                    s.startDate.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
                 endLt != null && startLt > endLt ->
                     s.date.minusDays(1).atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-                endLt == null && existing != null -> {
-                    val origDate = Instant.ofEpochMilli(existing.startMs).atZone(zone).toLocalDate()
-                    origDate.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
-                }
                 else ->
                     s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
             }
