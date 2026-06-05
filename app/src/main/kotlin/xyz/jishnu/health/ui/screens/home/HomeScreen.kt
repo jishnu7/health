@@ -448,6 +448,13 @@ private fun ActiveTopCard(
     }
     val share = rememberFastShareTrigger(capture, chooserTitle = "Share progress")
 
+    // Hour at which stage 2 ("Early fast") starts. Below this we treat the
+    // fast as "still warming up" — the I Ate escape hatch is offered, and
+    // there's no share-worthy milestone yet. Once stage 2 is crossed, we hide
+    // I Ate (committed) and surface Share (milestone reached).
+    val phaseTwoStartH = state.stages.getOrNull(1)?.startHour ?: 4
+    val pastPhaseTwo = state.elapsedHours >= phaseTwoStartH
+
     Box(modifier = Modifier.fillMaxWidth()) {
         HiddenLastFastCaptureCard(summary = ongoingSummary, capture = capture)
         Column(
@@ -494,25 +501,38 @@ private fun ActiveTopCard(
             Spacer(Modifier.height(18.dp))
             Divider()
             Spacer(Modifier.height(18.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+            // Past stage 2 the I Ate "undo" disappears — End Fast then takes
+            // the full row. Before that, both buttons share the row equally.
+            if (pastPhaseTwo) {
                 IntermButton(
                     onClick = onEnd,
                     variant = IntermButtonVariant.Soft,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(IntermIcons.Stop, contentDescription = null)
                     Text("End Fast")
                 }
-                IntermButton(
-                    onClick = onAte,
-                    variant = IntermButtonVariant.Danger,
-                    modifier = Modifier.weight(1f),
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Icon(IntermIcons.Food, contentDescription = null)
-                    Text("I Ate")
+                    IntermButton(
+                        onClick = onEnd,
+                        variant = IntermButtonVariant.Soft,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(IntermIcons.Stop, contentDescription = null)
+                        Text("End Fast")
+                    }
+                    IntermButton(
+                        onClick = onAte,
+                        variant = IntermButtonVariant.Danger,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(IntermIcons.Food, contentDescription = null)
+                        Text("I Ate")
+                    }
                 }
             }
         }
@@ -520,8 +540,7 @@ private fun ActiveTopCard(
         // into the 2nd metabolic stage — sharing a 30-minute "in progress"
         // snapshot isn't meaningful, but once stage 2 lands there's a real
         // milestone to share.
-        val phaseTwoStartH = state.stages.getOrNull(1)?.startHour ?: 4
-        if (state.elapsedHours >= phaseTwoStartH) {
+        if (pastPhaseTwo) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
