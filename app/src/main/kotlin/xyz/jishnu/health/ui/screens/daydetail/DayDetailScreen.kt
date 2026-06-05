@@ -388,7 +388,14 @@ private fun OngoingFastBlock(
     val goalEndTime = state.startTime?.let { TimeMath.addHoursToTime(it, state.goalHours.toDouble()) }
     var showStartPicker by remember { mutableStateOf(false) }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(c.card)
+            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         ProgressRing(
             progress = progress,
             size = 220.dp,
@@ -412,11 +419,11 @@ private fun OngoingFastBlock(
                 )
             }
         }
-
-        Spacer(Modifier.height(20.dp))
-
+        Spacer(Modifier.height(22.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(c.border))
+        Spacer(Modifier.height(18.dp))
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             FastMarker(
