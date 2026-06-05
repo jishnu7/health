@@ -276,15 +276,9 @@ class DayDetailViewModel @Inject constructor(
      */
     fun resumeFast(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
-        // Prefer the most recently-ended session on this day — the one the
-        // user just stopped is what they meant to undo, not necessarily the
-        // longest one which is what load()/primarySession picked.
-        val candidate = s.daySessions
-            .filter { it.endMs != null }
-            .maxByOrNull { it.endMs!! }
-            ?: s.sessionId?.let { fastingRepo.sessionById(it) }
-            ?: run { onDone(); return@launch }
-        val id = candidate.id
+        // Resume the session that's currently displayed in this DayDetail — the
+        // one the user is looking at when they tap the inline Resume pill.
+        val id = s.sessionId ?: run { onDone(); return@launch }
         val existing = fastingRepo.sessionById(id) ?: run { onDone(); return@launch }
         if (existing.endMs == null) { onDone(); return@launch } // already ongoing — nothing to do
         val nowActive = fastingRepo.activeSession.first()

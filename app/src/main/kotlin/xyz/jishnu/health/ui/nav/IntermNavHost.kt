@@ -165,17 +165,19 @@ fun IntermNavHost(
                 onResumed = {
                     // Bump Home's nonce so the next render plays the start-fast
                     // wipe, then navigate directly there. popUpTo(Home,
-                    // inclusive=false) clears DayDetail / Progress off the
-                    // back stack.
+                    // inclusive=false, saveState=false) discards the popped
+                    // Progress / DayDetail chain entirely — keeping their
+                    // saved state would let the bottom-nav restoreState round-
+                    // trip and re-show DayDetail when the user taps Progress.
                     runCatching {
                         val home = navController.getBackStackEntry(Routes.Home)
                         val prev = home.savedStateHandle.get<Long>("animate-start-nonce") ?: 0L
                         home.savedStateHandle["animate-start-nonce"] = prev + 1
                     }
                     navController.navigate(Routes.Home) {
-                        popUpTo(Routes.Home) { inclusive = false; saveState = true }
+                        popUpTo(Routes.Home) { inclusive = false; saveState = false }
                         launchSingleTop = true
-                        restoreState = true
+                        restoreState = false
                     }
                 },
             )
