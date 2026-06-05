@@ -48,6 +48,7 @@ import xyz.jishnu.health.ui.components.IntermCard
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermTopBar
 import xyz.jishnu.health.ui.components.NavTab
+import xyz.jishnu.health.ui.components.WeightTrendCard
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.WeightViewModel
 import java.time.LocalDate
@@ -139,6 +140,16 @@ fun WeightScreen(
                 Spacer(Modifier.height(10.dp))
                 IntermCard(modifier = Modifier.fillMaxWidth()) {
                     Text("Tap to add a note about today…", style = IntermTheme.typography.body, color = c.muted)
+                }
+
+                if (state.recent.isNotEmpty()) {
+                    Spacer(Modifier.height(20.dp))
+                    WeightTrendCard(
+                        entries = state.recent,
+                        units = state.units,
+                        modifier = Modifier.fillMaxWidth(),
+                        weeks = 8,
+                    )
                 }
 
                 Spacer(Modifier.height(22.dp))

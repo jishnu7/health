@@ -33,6 +33,8 @@ data class FastingUiState(
     val nowMs: Long,
     val plan: Plan,
     val units: Units,
+    val fastStartTime: String = "20:00",
+    val lastFast: xyz.jishnu.health.data.local.FastingSessionEntity? = null,
     val stages: List<Stage> = Stages.all,
 ) {
     val elapsedMs: Long = if (isFasting && fastStartMs != null) (nowMs - fastStartMs).coerceAtLeast(0L) else 0L
@@ -64,8 +66,15 @@ class FastingViewModel @Inject constructor(
         tick,
         fastingRepo.activeSession,
         settingsRepo.settings,
-    ) { now, active, settings ->
+        fastingRepo.allSessions,
+    ) { now, active, settings, all ->
         val plan = Plans.byId(active?.planId ?: settings.planId)
+        // Most-recent completed fast — only matters when no fast is active and
+        // we want the returning-user copy / share card on Home.
+        val lastFast = all
+            .asSequence()
+            .filter { it.id != active?.id && it.endMs != null }
+            .maxByOrNull { it.endMs!! }
         FastingUiState(
             isFasting = active != null,
             activeSessionId = active?.id,
@@ -73,6 +82,8 @@ class FastingViewModel @Inject constructor(
             nowMs = now,
             plan = plan,
             units = settings.units,
+            fastStartTime = settings.fastStartTime,
+            lastFast = lastFast,
         )
     }.stateIn(
         scope = viewModelScope,

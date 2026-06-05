@@ -45,7 +45,7 @@ class WeightViewModel @Inject constructor(
     private val draftKg = MutableStateFlow<Double?>(null)
 
     val state: StateFlow<WeightUiState> = combine(
-        repo.recent(7),
+        repo.recent(56),
         settingsRepo.settings,
         profileRepo.profile,
         draftKg.asStateFlow(),

@@ -164,6 +164,21 @@ object IntermIcons {
         width = 1.8f,
     )
     val ChevronDown = strokeIcon("ChevronDown", "M6 9l6 6 6-6", width = 2f)
+    val Share = strokeIconMulti(
+        "Share",
+        listOf(
+            "M 12 3 L 12 16",
+            "M 8 7 L 12 3 L 16 7",
+            "M 5 13 L 5 19 A 2 2 0 0 0 7 21 L 17 21 A 2 2 0 0 0 19 19 L 19 13",
+        ),
+    )
+    val Clock = strokeIconMulti(
+        "Clock",
+        listOf(
+            "M12 3 A 9 9 0 1 0 12 21 A 9 9 0 1 0 12 3 Z",
+            "M12 7v5l3 2",
+        ),
+    )
     val Help = strokeIconMulti(
         "Help",
         listOf(

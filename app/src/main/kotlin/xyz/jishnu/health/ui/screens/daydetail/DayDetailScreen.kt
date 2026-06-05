@@ -48,6 +48,8 @@ import xyz.jishnu.health.domain.StageCalculator
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.domain.WaterMath
 import xyz.jishnu.health.domain.WeightMath
+import kotlinx.coroutines.launch
+import xyz.jishnu.health.ui.components.CaptureBox
 import xyz.jishnu.health.ui.components.GoalChip
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonVariant
@@ -55,9 +57,15 @@ import xyz.jishnu.health.ui.components.IntermCard
 import xyz.jishnu.health.ui.components.IntermIcons
 import xyz.jishnu.health.ui.components.IntermStageChip
 import xyz.jishnu.health.ui.components.IntermTopBar
+import xyz.jishnu.health.ui.components.LastFastCard
+import xyz.jishnu.health.ui.components.LastFastEdit
+import xyz.jishnu.health.ui.components.LastFastSummary
 import xyz.jishnu.health.ui.components.ProgressRing
 import xyz.jishnu.health.ui.components.StageDots
 import xyz.jishnu.health.ui.components.TimeRow
+import xyz.jishnu.health.ui.components.rebuildSummary
+import xyz.jishnu.health.ui.components.rememberCardCapture
+import xyz.jishnu.health.ui.components.shareBitmapAsImage
 import xyz.jishnu.health.ui.screens.water.WaterGlass
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.vm.DayDetailViewModel
@@ -114,7 +122,7 @@ fun DayDetailScreen(
                     .padding(horizontal = 20.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                FastDisplay(
+                FastSection(
                     state = state,
                     status = status,
                     onSetStart = vm::setStart,
@@ -297,57 +305,128 @@ private fun DayWaterCard(ml: Int, goalMl: Int, units: xyz.jishnu.health.data.mod
 }
 
 /**
- * Mirrors the Home screen's active-fast layout — stage chip, progress ring with
- * elapsed time, and time markers — but driven by the day's recorded (or
- * in-progress) session. The Started/Ended markers double as inline editors,
- * tapping either opens a [TimePickerDialog] that writes through
- * [onSetStart] / [onSetEnd].
+ * Day-detail fast section. Three modes:
+ *  • completed fast → [LastFastCard] with editable Started/Ended markers, a
+ *    share button, and a separate "Resume this fast" soft button below when
+ *    canResume.
+ *  • ongoing fast → the same in-ring elapsed display we used before so the
+ *    user can watch the clock keep moving.
+ *  • no session yet → empty dashed ring with a "goal" headline so the user
+ *    can pick a start time without seeing a misleading 0:00 mono.
  */
 @Composable
-private fun FastDisplay(
+private fun FastSection(
     state: xyz.jishnu.health.vm.DayDetailUiState,
     status: xyz.jishnu.health.data.model.FastStatus?,
     onSetStart: (String) -> Unit,
     onSetEnd: (String) -> Unit,
     onResume: () -> Unit,
 ) {
-    val c = IntermTheme.colors
-    val stages = Stages.all
-    val durationHours = state.durationHours
-    val stage = StageCalculator.stageFor(durationHours, stages)
-    val stageIdx = stages.indexOf(stage).coerceAtLeast(0)
-    val progress = if (state.goalHours > 0) (durationHours / state.goalHours).coerceIn(0.0, 1.0).toFloat() else 0f
-
-    // For ongoing fasts the third marker shows the projected goal end time
-    // (start + goalHours), wrapped within the 24-hour clock. It's read-only —
-    // the user can't edit when an in-progress fast will "end" except by ending
-    // it on Home.
-    val goalEndTime = state.startTime?.let { TimeMath.addHoursToTime(it, state.goalHours.toDouble()) }
-    val endMarkerValue = when {
-        state.isOngoing -> goalEndTime ?: "—"
-        else -> state.displayedEndTime ?: "—"
-    }
-
-    var showStartPicker by remember { mutableStateOf(false) }
-    var showEndPicker by remember { mutableStateOf(false) }
-
     Spacer(Modifier.height(20.dp))
+    when {
+        state.hasSession && !state.isOngoing -> CompletedFastBlock(
+            state = state,
+            onSetStart = onSetStart,
+            onSetEnd = onSetEnd,
+            onResume = onResume,
+        )
+        state.isOngoing -> OngoingFastBlock(state = state, onSetStart = onSetStart)
+        else -> EmptyDayBlock(state = state, onSetStart = onSetStart)
+    }
+    Spacer(Modifier.height(8.dp))
+}
 
-    ProgressRing(
-        progress = progress,
-        size = 220.dp,
-        stroke = 10.dp,
-        dashed = !state.hasSession,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (state.hasSession) {
+@Composable
+private fun CompletedFastBlock(
+    state: xyz.jishnu.health.vm.DayDetailUiState,
+    onSetStart: (String) -> Unit,
+    onSetEnd: (String) -> Unit,
+    onResume: () -> Unit,
+) {
+    val c = IntermTheme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val capture = rememberCardCapture()
+    val plan = xyz.jishnu.health.data.constants.Plans.all.firstOrNull { it.fastHours == state.goalHours }
+    val planLabel = plan?.label ?: "${state.goalHours}:${24 - state.goalHours}"
+    val startTime = state.startTime ?: "00:00"
+    val endTime = state.endTime ?: state.displayedEndTime ?: startTime
+    val summary = rebuildSummary(
+        onDate = state.date,
+        startHhmm = startTime,
+        endHhmm = endTime,
+        goalHours = state.goalHours,
+        planLabel = planLabel,
+        zone = state.zone,
+    )
+    val edit = LastFastEdit(
+        startTime = startTime,
+        endTime = endTime,
+        onStart = onSetStart,
+        onEnd = onSetEnd,
+    )
+    // Flip the card into share-image mode for the capture frames: no edit
+    // chevrons, no share button, and an "INTERMITTENT FASTING" eyebrow stands
+    // in for the share button so the screenshot reads as a standalone artifact.
+    // The flag is cleared as soon as the bitmap is captured, so on-screen the
+    // editable affordances stay.
+    var capturing by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
+            LastFastCard(
+                summary = summary,
+                modifier = Modifier.fillMaxWidth(),
+                edit = if (capturing) null else edit,
+                forCapture = capturing,
+                onShare = {
+                    scope.launch {
+                        capturing = true
+                        // Two frame-waits guarantee the recomposition has been
+                        // both laid out and drawn into the GraphicsLayer before
+                        // we read the pixels.
+                        androidx.compose.runtime.withFrameNanos { }
+                        androidx.compose.runtime.withFrameNanos { }
+                        val bitmap = capture.captureBitmap(paddingPx = 48)
+                        capturing = false
+                        bitmap?.let { shareBitmapAsImage(context, it) }
+                    }
+                },
+            )
+        }
+        if (state.canResume) {
+            IntermButton(
+                onClick = onResume,
+                variant = IntermButtonVariant.Soft,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(IntermIcons.Play, contentDescription = null)
+                Text("Resume this fast")
+            }
+        }
+    }
+}
+
+@Composable
+private fun OngoingFastBlock(
+    state: xyz.jishnu.health.vm.DayDetailUiState,
+    onSetStart: (String) -> Unit,
+) {
+    val c = IntermTheme.colors
+    val durationHours = state.durationHours
+    val progress = if (state.goalHours > 0) (durationHours / state.goalHours).coerceIn(0.0, 1.0).toFloat() else 0f
+    val goalEndTime = state.startTime?.let { TimeMath.addHoursToTime(it, state.goalHours.toDouble()) }
+    var showStartPicker by remember { mutableStateOf(false) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        ProgressRing(
+            progress = progress,
+            size = 220.dp,
+            stroke = 10.dp,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val elapsedMs = (durationHours * 3_600_000.0).toLong()
                 val d = TimeMath.fmtDuration(elapsedMs)
-                Text(
-                    if (state.isOngoing) "ELAPSED" else "DURATION",
-                    style = IntermTheme.typography.hEyebrow,
-                    color = c.muted,
-                )
+                Text("ELAPSED", style = IntermTheme.typography.hEyebrow, color = c.muted)
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(d.hh, style = IntermTheme.typography.hDisplay.copy(fontSize = 44.sp), color = c.ink)
@@ -360,26 +439,61 @@ private fun FastDisplay(
                     style = IntermTheme.typography.caption,
                     color = c.muted,
                 )
-                if (state.canResume) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(c.primarySoft)
-                            .clickable(onClick = onResume)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(IntermIcons.Play, contentDescription = null, tint = c.primary, modifier = Modifier.size(12.dp))
-                        Text(
-                            "Resume",
-                            style = IntermTheme.typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.W600),
-                            color = c.primary,
-                        )
-                    }
-                }
-            } else {
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            FastMarker(
+                label = "Started",
+                value = state.startTime ?: "—",
+                align = Alignment.Start,
+                onClick = { showStartPicker = true },
+            )
+            val remainingH = (state.goalHours - durationHours).coerceAtLeast(0.0)
+            val rh = remainingH.toInt()
+            val rm = ((remainingH - rh) * 60).toInt()
+            FastMarker(
+                label = "Remaining",
+                value = "${rh}h ${rm.toString().padStart(2, '0')}m",
+                align = Alignment.CenterHorizontally,
+            )
+            FastMarker(
+                label = "Goal",
+                value = goalEndTime ?: "—",
+                align = Alignment.End,
+            )
+        }
+    }
+
+    if (showStartPicker) {
+        xyz.jishnu.health.ui.components.TimePickerDialog(
+            initial = state.startTime ?: "08:00",
+            onDismiss = { showStartPicker = false },
+            onConfirm = { showStartPicker = false; onSetStart(it) },
+        )
+    }
+}
+
+@Composable
+private fun EmptyDayBlock(
+    state: xyz.jishnu.health.vm.DayDetailUiState,
+    onSetStart: (String) -> Unit,
+) {
+    val c = IntermTheme.colors
+    var showStartPicker by remember { mutableStateOf(false) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        ProgressRing(
+            progress = 0f,
+            size = 220.dp,
+            stroke = 10.dp,
+            dashed = true,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("GOAL", style = IntermTheme.typography.hEyebrow, color = c.muted)
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -389,72 +503,26 @@ private fun FastDisplay(
                 )
             }
         }
-    }
-
-    Spacer(Modifier.height(20.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        FastMarker(
-            label = "Started",
-            value = state.startTime ?: "—",
-            align = Alignment.Start,
-            onClick = { showStartPicker = true },
-        )
-        val middleLabel: String
-        val middleValue: String
-        if (state.isOngoing) {
-            val remainingH = (state.goalHours - durationHours).coerceAtLeast(0.0)
-            val rh = remainingH.toInt()
-            val rm = ((remainingH - rh) * 60).toInt()
-            middleLabel = "Remaining"
-            middleValue = "${rh}h ${rm.toString().padStart(2, '0')}m"
-        } else if (state.hasSession) {
-            val ih = durationHours.toInt()
-            val im = ((durationHours - ih) * 60).toInt()
-            middleLabel = "Duration"
-            middleValue = "${ih}h ${im.toString().padStart(2, '0')}m"
-        } else {
-            middleLabel = "Duration"
-            middleValue = "—"
+        Spacer(Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            FastMarker(
+                label = "Started",
+                value = state.startTime ?: "—",
+                align = Alignment.Start,
+                onClick = { showStartPicker = true },
+            )
+            FastMarker(label = "Duration", value = "—", align = Alignment.CenterHorizontally)
+            FastMarker(label = "Ended", value = "—", align = Alignment.End)
         }
-        FastMarker(label = middleLabel, value = middleValue, align = Alignment.CenterHorizontally)
-        FastMarker(
-            label = if (state.isOngoing) "Goal" else "Ended",
-            value = endMarkerValue,
-            align = Alignment.End,
-            // Goal end time is derived from start + goalHours while a fast is
-            // running; only "Ended" (completed fasts) is editable.
-            onClick = if (state.isOngoing) null else ({ showEndPicker = true }),
-        )
     }
-
-    Spacer(Modifier.height(18.dp))
-
-    if (state.hasSession) {
-        xyz.jishnu.health.ui.components.EnergyBar(
-            elapsedHours = durationHours,
-            modifier = Modifier.fillMaxWidth(),
-            compact = true,
-        )
-    }
-
-    Spacer(Modifier.height(8.dp))
-
     if (showStartPicker) {
         xyz.jishnu.health.ui.components.TimePickerDialog(
             initial = state.startTime ?: "08:00",
             onDismiss = { showStartPicker = false },
             onConfirm = { showStartPicker = false; onSetStart(it) },
-        )
-    }
-    if (showEndPicker) {
-        xyz.jishnu.health.ui.components.TimePickerDialog(
-            initial = state.displayedEndTime ?: state.startTime ?: "12:00",
-            onDismiss = { showEndPicker = false },
-            onConfirm = { showEndPicker = false; onSetEnd(it) },
         )
     }
 }
