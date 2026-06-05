@@ -428,20 +428,11 @@ private fun ActiveBody(
             TimeMarker("Goal", goalAt?.let { TimeMath.fmtTime(it) } ?: "—", Alignment.End)
         }
 
-        StageDots(count = state.stages.size, currentIdx = state.stageIdx)
-
-        IntermCard(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenStages),
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("CURRENT STAGE", style = IntermTheme.typography.hEyebrow, color = c.muted)
-                Icon(IntermIcons.Chevron, contentDescription = null, tint = c.muted)
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(state.stage.title, style = IntermTheme.typography.headerTitle.copy(fontSize = 18.sp), color = c.ink)
-            Spacer(Modifier.height(6.dp))
-            Text(state.stage.body, style = IntermTheme.typography.body, color = c.ink2)
-        }
+        xyz.jishnu.health.ui.components.EnergyBar(
+            elapsedHours = state.elapsedHours,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenStages,
+        )
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IntermButton(onClick = onEnd, variant = IntermButtonVariant.Soft, modifier = Modifier.weight(1f)) {

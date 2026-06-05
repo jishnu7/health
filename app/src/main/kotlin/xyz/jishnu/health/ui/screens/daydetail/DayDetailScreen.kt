@@ -433,7 +433,13 @@ private fun FastDisplay(
 
     Spacer(Modifier.height(18.dp))
 
-    StageDots(count = stages.size, currentIdx = if (state.hasSession) stageIdx else -1)
+    if (state.hasSession) {
+        xyz.jishnu.health.ui.components.EnergyBar(
+            elapsedHours = durationHours,
+            modifier = Modifier.fillMaxWidth(),
+            compact = true,
+        )
+    }
 
     Spacer(Modifier.height(8.dp))
 
