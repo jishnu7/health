@@ -132,14 +132,18 @@ fun WeightScreen(
                             trendValue = trendW,
                             avg = avgW,
                         )
+                        Spacer(Modifier.height(20.dp))
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(c.border))
+                        Spacer(Modifier.height(16.dp))
+                        IntermButton(
+                            onClick = { vm.save { onNavigateTab(NavTab.Today) } },
+                            variant = IntermButtonVariant.Primary,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(IntermIcons.Check, contentDescription = null)
+                            Text("Save Weight")
+                        }
                     }
-                }
-
-                Spacer(Modifier.height(20.dp))
-                Text("NOTES (OPTIONAL)", style = IntermTheme.typography.hEyebrow, color = c.muted)
-                Spacer(Modifier.height(10.dp))
-                IntermCard(modifier = Modifier.fillMaxWidth()) {
-                    Text("Tap to add a note about today…", style = IntermTheme.typography.body, color = c.muted)
                 }
 
                 if (state.recent.isNotEmpty()) {
@@ -152,16 +156,6 @@ fun WeightScreen(
                     )
                 }
 
-                Spacer(Modifier.height(22.dp))
-                IntermButton(
-                    onClick = { vm.save { onNavigateTab(NavTab.Today) } },
-                    variant = IntermButtonVariant.Primary,
-                    size = xyz.jishnu.health.ui.components.IntermButtonSize.Large,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Icon(IntermIcons.Check, contentDescription = null)
-                    Text("Save Entry")
-                }
                 Spacer(Modifier.height(20.dp))
             }
             BottomNav(
