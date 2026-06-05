@@ -70,6 +70,13 @@ fun HomeScreen(
     onNavigateTab: (NavTab) -> Unit,
     onOpenStages: () -> Unit,
     onOpenSettings: () -> Unit,
+    /**
+     * Monotonic counter — the value increments every time something external
+     * (e.g. DayDetail's Resume) wants Home to replay its start-fast animation.
+     * Using a counter instead of a one-shot Boolean means the prop never flips
+     * mid-animation, so the LaunchedEffect below isn't cancelled half-way.
+     */
+    animateStartNonce: Long = 0L,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
@@ -118,6 +125,36 @@ fun HomeScreen(
                 )
             }
         }
+    }
+
+    // Fires when Home is entered as a result of a Resume from DayDetail — i.e.
+    // whenever animateStartNonce ticks past the value we last handled. Plays
+    // the same wipe → reveal motion as a fresh Start Fast tap, but skips
+    // vm.startFast() because the session is already active.
+    var lastHandledStartNonce by remember { mutableStateOf(animateStartNonce) }
+    LaunchedEffect(animateStartNonce) {
+        if (animateStartNonce == lastHandledStartNonce) return@LaunchedEffect
+        lastHandledStartNonce = animateStartNonce
+        // Wait for the activeSession flow to propagate the resumed session
+        // before kicking off the visual — otherwise the post-sweep fill animates
+        // against a stale fastStartMs.
+        snapshotFlow { state.isFasting }.first { it }
+        sweeping = true
+        displayFasting = false
+        dashAmount.snapTo(1f)
+        ringProgress.snapTo(0f)
+        ringProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        )
+        displayFasting = true
+        ringProgress.snapTo(0f)
+        sweeping = false
+        scope.launch { dashAmount.animateTo(0f, tween(durationMillis = 350, easing = FastOutSlowInEasing)) }
+        ringProgress.animateTo(
+            targetValue = state.progress,
+            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        )
     }
 
     val onStartWithSweep: () -> Unit = {

@@ -110,12 +110,18 @@ fun IntermNavHost(
                 },
             )
         }
-        composable(Routes.Home) {
+        composable(Routes.Home) { entry ->
+            // Monotonic counter set by DayDetail's Resume flow. HomeScreen
+            // compares it against its own last-handled value to decide whether
+            // to replay the start-fast animation — the counter is never reset,
+            // so the prop can't flip back mid-animation and cancel itself.
+            val animateStartNonce = entry.savedStateHandle.get<Long>("animate-start-nonce") ?: 0L
             HomeScreen(
                 vm = vm,
                 onNavigateTab = ::navigateTab,
                 onOpenStages = { navController.navigate(Routes.Stages) },
                 onOpenSettings = { navController.navigate(Routes.Settings) },
+                animateStartNonce = animateStartNonce,
             )
         }
         composable(Routes.Stages) {
@@ -154,6 +160,22 @@ fun IntermNavHost(
                 onOpenSession = { sessionId ->
                     navController.navigate("${Routes.DayDetail}/$dayKey?sessionId=$sessionId") {
                         popUpTo("${Routes.DayDetail}/{dayKey}?sessionId={sessionId}") { inclusive = true }
+                    }
+                },
+                onResumed = {
+                    // Bump Home's nonce so the next render plays the start-fast
+                    // wipe, then navigate directly there. popUpTo(Home,
+                    // inclusive=false) clears DayDetail / Progress off the
+                    // back stack.
+                    runCatching {
+                        val home = navController.getBackStackEntry(Routes.Home)
+                        val prev = home.savedStateHandle.get<Long>("animate-start-nonce") ?: 0L
+                        home.savedStateHandle["animate-start-nonce"] = prev + 1
+                    }
+                    navController.navigate(Routes.Home) {
+                        popUpTo(Routes.Home) { inclusive = false; saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
             )

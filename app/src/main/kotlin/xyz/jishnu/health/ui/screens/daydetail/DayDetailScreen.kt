@@ -71,6 +71,7 @@ import kotlin.math.abs
 fun DayDetailScreen(
     onBack: () -> Unit,
     onOpenSession: (Long) -> Unit = {},
+    onResumed: () -> Unit = onBack,
     vm: DayDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -118,6 +119,7 @@ fun DayDetailScreen(
                     status = status,
                     onSetStart = vm::setStart,
                     onSetEnd = vm::setEnd,
+                    onResume = { vm.resumeFast(onResumed) },
                 )
 
                 SectionLabel("Weight")
@@ -307,6 +309,7 @@ private fun FastDisplay(
     status: xyz.jishnu.health.data.model.FastStatus?,
     onSetStart: (String) -> Unit,
     onSetEnd: (String) -> Unit,
+    onResume: () -> Unit,
 ) {
     val c = IntermTheme.colors
     val stages = Stages.all
@@ -357,6 +360,25 @@ private fun FastDisplay(
                     style = IntermTheme.typography.caption,
                     color = c.muted,
                 )
+                if (state.canResume) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(c.primarySoft)
+                            .clickable(onClick = onResume)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(IntermIcons.Play, contentDescription = null, tint = c.primary, modifier = Modifier.size(12.dp))
+                        Text(
+                            "Resume",
+                            style = IntermTheme.typography.caption.copy(fontSize = 11.sp, fontWeight = FontWeight.W600),
+                            color = c.primary,
+                        )
+                    }
+                }
             } else {
                 Text("GOAL", style = IntermTheme.typography.hEyebrow, color = c.muted)
                 Spacer(Modifier.height(6.dp))

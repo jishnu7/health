@@ -51,6 +51,7 @@ data class DayDetailUiState(
      * calculation in this VM matches what [FastingViewModel] shows on Home.
      */
     val startDate: LocalDate? = null,
+    val otherActiveSession: Boolean = false,
 ) {
     private val startInstantMs: Long?
         get() = startTime?.let {
@@ -76,6 +77,15 @@ data class DayDetailUiState(
     val hasSession: Boolean = startTime != null || sessionId != null
 
     val goalMet: Boolean = hasSession && durationHours >= goalHours
+
+    val isToday: Boolean = date == LocalDate.now(zone)
+
+    /**
+     * True when the user is looking at today's row, the loaded session is
+     * completed (has an endMs) and there is no other fast currently running.
+     * The Resume button uses this to expose an "undo End Fast" affordance.
+     */
+    val canResume: Boolean = isToday && hasSession && !isOngoing && sessionId != null && !otherActiveSession
 }
 
 @HiltViewModel
@@ -85,6 +95,7 @@ class DayDetailViewModel @Inject constructor(
     private val weightRepo: WeightRepository,
     private val waterRepo: WaterRepository,
     private val settingsRepo: SettingsRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
 ) : ViewModel() {
 
     private val dayKey: Long = savedState["dayKey"] ?: System.currentTimeMillis()
@@ -119,8 +130,8 @@ class DayDetailViewModel @Inject constructor(
         // today's day, so include the active session when this is today's row.
         val ended = fastingRepo.sessionsEndingInRange(dayStart, dayEnd).first()
         val nowMs = System.currentTimeMillis()
-        val ongoing = fastingRepo.activeSession.first()
-            ?.takeIf { it.endMs == null && nowMs in dayStart until dayEnd }
+        val activeSession = fastingRepo.activeSession.first()
+        val ongoing = activeSession?.takeIf { it.endMs == null && nowMs in dayStart until dayEnd }
         val sessions = (ended + listOfNotNull(ongoing))
             .distinctBy { it.id }
             .sortedByDescending { it.startMs }
@@ -180,6 +191,10 @@ class DayDetailViewModel @Inject constructor(
             waterMl = waterMl,
             waterGoalMl = settings.waterGoalMl,
             startDate = startDate,
+            // An active session counts as "other" only if it's not the one we
+            // just loaded. The Resume button uses this to refuse when a
+            // different fast is already running.
+            otherActiveSession = activeSession != null && activeSession.id != session?.id,
         )
     }
 
@@ -250,6 +265,40 @@ class DayDetailViewModel @Inject constructor(
             }
         }
         weightRepo.upsertForDay(s.dayKey, s.weightKg, s.notes.ifBlank { null })
+        onDone()
+    }
+
+    /**
+     * Re-opens a session that was already ended — sets endMs back to null and
+     * (re)starts the foreground service if sticky notification is on. Bails
+     * silently if anything has changed since [load] ran (a different fast is
+     * now active, or the session was deleted).
+     */
+    fun resumeFast(onDone: () -> Unit) = viewModelScope.launch {
+        val s = _state.value
+        // Prefer the most recently-ended session on this day — the one the
+        // user just stopped is what they meant to undo, not necessarily the
+        // longest one which is what load()/primarySession picked.
+        val candidate = s.daySessions
+            .filter { it.endMs != null }
+            .maxByOrNull { it.endMs!! }
+            ?: s.sessionId?.let { fastingRepo.sessionById(it) }
+            ?: run { onDone(); return@launch }
+        val id = candidate.id
+        val existing = fastingRepo.sessionById(id) ?: run { onDone(); return@launch }
+        if (existing.endMs == null) { onDone(); return@launch } // already ongoing — nothing to do
+        val nowActive = fastingRepo.activeSession.first()
+        if (nowActive != null && nowActive.id != id) { onDone(); return@launch } // another fast running
+        fastingRepo.updateSession(existing.copy(endMs = null))
+        val settings = settingsRepo.settings.first()
+        if (settings.stickyNotificationOn) {
+            xyz.jishnu.health.notifications.FastingForegroundService.start(appContext)
+        }
+        // Block until the activeSession flow reflects the resumed row. This
+        // closes a race where Home re-subscribes to FastingViewModel.state and
+        // reads the stale (isFasting = false) cached value before Room has
+        // had a chance to re-emit.
+        fastingRepo.activeSession.first { it?.id == id }
         onDone()
     }
 
