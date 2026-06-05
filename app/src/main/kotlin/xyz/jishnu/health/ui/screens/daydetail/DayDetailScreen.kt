@@ -371,7 +371,7 @@ private fun CompletedFastBlock(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(IntermIcons.Play, contentDescription = null)
-                Text("Resume this fast")
+                Text("Resume This Fast")
             }
         }
     }

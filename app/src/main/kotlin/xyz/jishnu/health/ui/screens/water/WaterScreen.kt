@@ -282,7 +282,7 @@ private fun HydrationScheduleDialog(goalMl: Int, units: Units, onDismiss: () -> 
                 xyz.jishnu.health.ui.components.IntermButton(
                     onClick = onDismiss,
                     variant = xyz.jishnu.health.ui.components.IntermButtonVariant.Primary,
-                ) { Text("Got it") }
+                ) { Text("Got It") }
             }
         }
     }

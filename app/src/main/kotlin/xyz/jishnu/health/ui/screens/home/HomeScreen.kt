@@ -433,7 +433,7 @@ private fun ReturningContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(IntermIcons.Play, contentDescription = null)
-                Text("Start Fasting now")
+                Text("Start Fasting Now")
             }
             Spacer(Modifier.height(12.dp))
             Row(

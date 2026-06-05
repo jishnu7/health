@@ -250,7 +250,7 @@ private fun IdealWeightDialog(
             Spacer(Modifier.height(18.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IntermButton(onClick = onDismiss, variant = IntermButtonVariant.Primary) {
-                    Text("Got it")
+                    Text("Got It")
                 }
             }
         }
