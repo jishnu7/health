@@ -47,8 +47,8 @@ import kotlinx.coroutines.launch
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.domain.TimeMath
 import xyz.jishnu.health.ui.components.BottomNav
-import xyz.jishnu.health.ui.components.EnergyPhaseCard
 import xyz.jishnu.health.ui.components.HiddenLastFastCaptureCard
+import xyz.jishnu.health.ui.components.MetabolicStageCard
 import xyz.jishnu.health.ui.components.IntermButton
 import xyz.jishnu.health.ui.components.IntermButtonSize
 import xyz.jishnu.health.ui.components.IntermButtonVariant
@@ -588,7 +588,7 @@ private fun ActiveHomeContent(
             }
         }
 
-        EnergyPhaseCard(
+        MetabolicStageCard(
             elapsedHours = state.elapsedHours,
             modifier = Modifier.fillMaxWidth(),
             onClick = onOpenStages,

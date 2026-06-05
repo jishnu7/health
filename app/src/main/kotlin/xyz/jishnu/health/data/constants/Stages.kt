@@ -13,7 +13,8 @@ object Stages {
             title = "Anabolic state",
             body = "Insulin is elevated. Your body is digesting and storing nutrients from your last meal.",
             benefits = listOf("Glucose is primary fuel", "Glycogen stores filling", "Protein synthesis active"),
-            hue = 18,
+            hue = 40,
+            message = "Digesting your last meal",
         ),
         Stage(
             id = "early",
@@ -24,13 +25,9 @@ object Stages {
             title = "Glucose decline",
             body = "Insulin levels drop. Blood glucose stabilizes as your body begins to use stored glycogen.",
             benefits = listOf("Insulin returning to baseline", "Mild appetite reduction", "Stable blood sugar"),
-            hue = 32,
+            hue = 85,
+            message = "Insulin levels are falling",
         ),
-        // From here on, the user has crossed into glycogen burn — the first
-        // "good" milestone of a fast. Hues jump from warm orange (early) into
-        // the green/teal end of the spectrum and stay there through autophagy
-        // so the stage ribbon reads as "fed/early = still warming up; the
-        // rest = doing real work".
         Stage(
             id = "glycogen",
             name = "Glycogen burn",
@@ -41,6 +38,7 @@ object Stages {
             body = "The liver releases its stored glycogen to maintain blood sugar. Reserves are running down.",
             benefits = listOf("Liver glycogen depleting", "Body preparing to shift fuel", "Hunger signals quieting"),
             hue = 130,
+            message = "Burning through stored carbs",
         ),
         Stage(
             id = "shift",
@@ -52,6 +50,7 @@ object Stages {
             body = "With glycogen low, your body begins breaking down fat for energy. The metabolic switch is flipping.",
             benefits = listOf("Lipolysis begins", "Free fatty acids rise", "Mental clarity often reported"),
             hue = 145,
+            message = "Switching over to fat for fuel",
         ),
         Stage(
             id = "burn",
@@ -63,6 +62,7 @@ object Stages {
             body = "You are now running primarily on fat. Stored triglycerides break down into fatty acids for fuel.",
             benefits = listOf("Fat oxidation accelerating", "Insulin sensitivity improving", "Steady energy"),
             hue = 160,
+            message = "Running primarily on body fat",
         ),
         Stage(
             id = "ketosis",
@@ -74,6 +74,7 @@ object Stages {
             body = "The liver starts producing ketones from fatty acids. Your brain begins using them alongside glucose.",
             benefits = listOf("Ketone production begins", "Reduced inflammation", "Improved focus"),
             hue = 175,
+            message = "Ketones are rising",
         ),
         Stage(
             id = "deep",
@@ -85,6 +86,7 @@ object Stages {
             body = "Ketone levels rise significantly. Most of your energy is now coming from fat-derived fuel.",
             benefits = listOf("Significant fat loss window", "Cognitive benefits peak", "Appetite suppression"),
             hue = 195,
+            message = "Fully fat-adapted",
         ),
         Stage(
             id = "autophagy",
@@ -96,6 +98,7 @@ object Stages {
             body = "Autophagy ramps up — cells recycle damaged components. Growth hormone elevates and cellular renewal begins.",
             benefits = listOf("Damaged proteins recycled", "HGH elevation begins", "Longevity pathways active"),
             hue = 220,
+            message = "Cellular cleanup underway",
         ),
     )
 }

@@ -29,17 +29,6 @@ import xyz.jishnu.health.domain.StageCalculator
 import xyz.jishnu.health.ui.theme.IntermTheme
 import xyz.jishnu.health.ui.theme.stageColors
 
-private val StageMessages: Map<String, String> = mapOf(
-    "fed" to "Digesting your last meal",
-    "early" to "Insulin levels are falling",
-    "glycogen" to "Burning through stored carbs",
-    "shift" to "Switching over to fat for fuel",
-    "burn" to "Running primarily on body fat",
-    "ketosis" to "Ketones are rising",
-    "deep" to "Fully fat-adapted",
-    "autophagy" to "Cellular cleanup underway",
-)
-
 private data class StageSegment(val id: String, val start: Float, val end: Float)
 
 private fun stageSegments(): List<StageSegment> {
@@ -61,10 +50,11 @@ private fun fmtHM(h: Double): String {
 /**
  * The active metabolic stage as a focus card — tinted hero panel with the
  * stage message, a 24h stage ribbon underneath, and the countdown to the next
- * stage. Mirrors `EnergyPhaseCard` in `docs/project/shared.jsx`.
+ * stage. Driven entirely by [Stages.all] (the 8-stage metabolic model); the
+ * older 4-phase "energy" lens has been retired.
  */
 @Composable
-fun EnergyPhaseCard(
+fun MetabolicStageCard(
     elapsedHours: Double,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
@@ -76,7 +66,7 @@ fun EnergyPhaseCard(
     val palette = stageColors()
     val activeColor = palette[active.id] ?: c.primary
     val segs = stageSegments()
-    val activeMessage = StageMessages[active.id] ?: active.title
+    val activeMessage = active.message
 
     Column(
         modifier = modifier
