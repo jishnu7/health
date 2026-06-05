@@ -1,6 +1,8 @@
 package xyz.jishnu.health.ui.screens.settings
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -253,9 +255,28 @@ fun SettingsScreen(
                 }
 
                 SectionLabel("About")
+                val aboutContext = LocalContext.current
                 SettingsCard {
-                    NavRow(label = "Privacy policy", onClick = {})
-                    NavRow(label = "Help & support", onClick = {})
+                    NavRow(
+                        label = "Privacy policy",
+                        onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://j15h.nu/privacy/xyz.jishnu.health.html"),
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            runCatching { aboutContext.startActivity(intent) }
+                        },
+                    )
+                    NavRow(
+                        label = "Help & support",
+                        onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_SENDTO,
+                                Uri.parse("mailto:jishnu7+fastapp@gmail.com"),
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            runCatching { aboutContext.startActivity(intent) }
+                        },
+                    )
                     NavRow(label = "Version", trailing = "0.1.0", showChevron = false, showDivider = false)
                 }
 
