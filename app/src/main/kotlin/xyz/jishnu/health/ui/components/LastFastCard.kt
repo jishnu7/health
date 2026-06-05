@@ -311,8 +311,13 @@ private fun HeaderBand(
                 .fillMaxWidth()
                 .padding(start = 18.dp, end = 18.dp, top = 15.dp, bottom = 18.dp),
         ) {
+            // Fixed 32dp row height so the share-button (visible) and
+            // INTERMITTENT FASTING eyebrow (capture) variants take the same
+            // vertical space — otherwise the hidden capture card under the
+            // visible one would render shorter and leave empty pixels in the
+            // shared image.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(32.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {

@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -398,24 +399,31 @@ private fun ReturningContent(
             body = "Here's your last fast. Start another ${state.plan.label} whenever you're ready.",
         )
 
-        // Flip the card into share-image mode for the capture frames so the
-        // shared screenshot drops the share button itself and shows the
-        // "INTERMITTENT FASTING" eyebrow instead. Reverted as soon as we have
-        // the bitmap so the on-screen card keeps its tappable button.
-        var capturing by remember { mutableStateOf(false) }
-        CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
+        // Dual-card layer: the visible card carries the share button and the
+        // hidden sibling (same data, forCapture = true) is continuously drawn
+        // into the GraphicsLayer at alpha 0. On share, we read the layer's
+        // current pixels — no state toggle, no flash.
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(0f),
+            ) {
+                CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
+                    LastFastCard(
+                        summary = summary,
+                        modifier = Modifier.fillMaxWidth(),
+                        forCapture = true,
+                    )
+                }
+            }
             LastFastCard(
                 summary = summary,
                 modifier = Modifier.fillMaxWidth(),
-                forCapture = capturing,
                 onShare = {
                     scope.launch {
-                        capturing = true
-                        androidx.compose.runtime.withFrameNanos { }
-                        androidx.compose.runtime.withFrameNanos { }
-                        val bitmap = capture.captureBitmap(paddingPx = 48)
-                        capturing = false
-                        bitmap?.let { shareBitmapAsImage(context, it) }
+                        val bitmap = capture.captureBitmap(paddingPx = 48) ?: return@launch
+                        shareBitmapAsImage(context, bitmap)
                     }
                 },
             )

@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -365,30 +366,33 @@ private fun CompletedFastBlock(
         onStart = onSetStart,
         onEnd = onSetEnd,
     )
-    // Flip the card into share-image mode for the capture frames: no edit
-    // chevrons, no share button, and an "INTERMITTENT FASTING" eyebrow stands
-    // in for the share button so the screenshot reads as a standalone artifact.
-    // The flag is cleared as soon as the bitmap is captured, so on-screen the
-    // editable affordances stay.
-    var capturing by remember { mutableStateOf(false) }
+    // Dual-card layer: the visible card has the editable Started/Ended
+    // markers + share button, while a hidden sibling (alpha 0, forCapture =
+    // true, edit = null) is continuously drawn into the GraphicsLayer. On
+    // share we just read the layer — no recomposition, no flash.
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(0f),
+            ) {
+                CaptureBox(capture = capture, modifier = Modifier.fillMaxWidth()) {
+                    LastFastCard(
+                        summary = summary,
+                        modifier = Modifier.fillMaxWidth(),
+                        forCapture = true,
+                    )
+                }
+            }
             LastFastCard(
                 summary = summary,
                 modifier = Modifier.fillMaxWidth(),
-                edit = if (capturing) null else edit,
-                forCapture = capturing,
+                edit = edit,
                 onShare = {
                     scope.launch {
-                        capturing = true
-                        // Two frame-waits guarantee the recomposition has been
-                        // both laid out and drawn into the GraphicsLayer before
-                        // we read the pixels.
-                        androidx.compose.runtime.withFrameNanos { }
-                        androidx.compose.runtime.withFrameNanos { }
-                        val bitmap = capture.captureBitmap(paddingPx = 48)
-                        capturing = false
-                        bitmap?.let { shareBitmapAsImage(context, it) }
+                        val bitmap = capture.captureBitmap(paddingPx = 48) ?: return@launch
+                        shareBitmapAsImage(context, bitmap)
                     }
                 },
             )
