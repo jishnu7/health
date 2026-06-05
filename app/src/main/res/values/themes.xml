@@ -6,4 +6,19 @@
     <style name="Theme.Interm" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowLightStatusBar">true</item>
     </style>
+
+    <!--
+      Launch theme. Until the first frame of Compose renders, the system shows
+      the splash: cream background + light-mode launcher icon. installSplashScreen()
+      hot-swaps to Theme.Interm immediately after super.onCreate().
+
+      A dark counterpart lives in values-night/themes.xml so the splash matches
+      whichever system theme is active.
+    -->
+    <style name="Theme.Interm.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F6F3EE</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Interm</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

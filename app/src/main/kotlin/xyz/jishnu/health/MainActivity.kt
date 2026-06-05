@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
     private val pendingDeepLink = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run before super.onCreate so the splash screen API can hold
+        // the system splash while we hot-swap from Theme.Interm.Splash to
+        // Theme.Interm. Dark / light variants are picked from the system
+        // theme via values-night/themes.xml.
+        installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         pendingDeepLink.value = intent.extractDeepLinkRoute()

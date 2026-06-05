@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Dark splash variant — picked automatically by the system when the device
+      is in dark mode. Uses the cream-on-dark Fast icon (ic_brand_dark) so the
+      ring + dot have contrast against the bg #14130F backplate.
+    -->
+    <style name="Theme.Interm.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#14130F</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_brand_dark</item>
+        <item name="postSplashScreenTheme">@style/Theme.Interm</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
