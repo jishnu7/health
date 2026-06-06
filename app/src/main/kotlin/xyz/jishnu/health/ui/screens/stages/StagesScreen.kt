@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -47,6 +49,14 @@ fun StagesScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val c = IntermTheme.colors
+    val listState = rememberLazyListState()
+
+    // Land on the user's current stage so they don't have to scroll to find
+    // where they are — only matters when they're past the first stage.
+    LaunchedEffect(Unit) {
+        val target = state.stageIdx
+        if (target > 0) listState.scrollToItem(target)
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(c.bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -63,6 +73,7 @@ fun StagesScreen(
                 },
             )
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding(),
