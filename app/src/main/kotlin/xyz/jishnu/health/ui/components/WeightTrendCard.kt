@@ -2,6 +2,7 @@ package xyz.jishnu.health.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,7 +31,15 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import xyz.jishnu.health.data.local.WeightEntryEntity
@@ -174,6 +187,7 @@ private fun TrendChart(weekly: List<WeeklyStat>, units: Units) {
     val borderColor = c.border
     val mutedColor = c.muted
     val cardColor = c.card
+    val inkColor = c.ink
 
     val disp = weekly.map { w ->
         val lo = displayWeight(w.minKg, units)
@@ -185,13 +199,37 @@ private fun TrendChart(weekly: List<WeeklyStat>, units: Units) {
     val allHi = (disp.maxOf { it.hi } + 1f).toFloat()
     val ticks = 3
     val tickValues = (0..ticks).map { allLo + (allHi - allLo) * (it.toFloat() / ticks) }
+    val unitLabel = if (units == Units.Metric) "kg" else "lb"
+    val measurer = rememberTextMeasurer()
+
+    var selectedIdx by remember(weekly.size) { mutableStateOf<Int?>(null) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(336f / 180f),
     ) {
-        Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(336f / 180f)) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(336f / 180f)
+                .pointerInput(disp.size) {
+                    detectTapGestures { tap ->
+                        if (disp.isEmpty()) return@detectTapGestures
+                        val w = size.width.toFloat()
+                        val padLeftPx = w * (30f / 336f)
+                        val padRightPx = w * (12f / 336f)
+                        val iWPx = w - padLeftPx - padRightPx
+                        val n = disp.size
+                        val slotPx = iWPx / n
+                        val idx = (disp.indices).minByOrNull { i ->
+                            val x = padLeftPx + slotPx * (i + 0.5f)
+                            kotlin.math.abs(x - tap.x)
+                        } ?: return@detectTapGestures
+                        selectedIdx = if (selectedIdx == idx) null else idx
+                    }
+                },
+        ) {
             val w = size.width
             val h = size.height
             val padL = w * (30f / 336f)
@@ -282,6 +320,79 @@ private fun TrendChart(weekly: List<WeeklyStat>, units: Units) {
                     val y = yAt(v)
                     native.drawText("${v.toInt()}", padL - 6f, y + 3f, tickPaint)
                 }
+            }
+
+            // Tap tooltip — vertical guide + emphasised average dot + a card
+            // with the week's range and average.
+            selectedIdx?.takeIf { it in disp.indices }?.let { idx ->
+                val week = disp[idx]
+                val pointX = cx(idx)
+                val pointY = yAt(week.avg)
+
+                drawLine(
+                    color = mutedColor.copy(alpha = 0.45f),
+                    start = Offset(pointX, padT),
+                    end = Offset(pointX, padT + iH),
+                    strokeWidth = 1f,
+                    pathEffect = androidx.compose.ui.graphics.PathEffect
+                        .dashPathEffect(floatArrayOf(3f, 3f), 0f),
+                )
+                drawCircle(color = cardColor, radius = 5f, center = Offset(pointX, pointY))
+                drawCircle(
+                    color = lineColor,
+                    radius = 5f,
+                    center = Offset(pointX, pointY),
+                    style = Stroke(width = 2.4f),
+                )
+
+                val weekLabel = labelFmt.format(week.date)
+                val avgText = "${"%.1f".format(Locale.US, week.avg)} $unitLabel"
+                val rangeText = "${"%.1f".format(Locale.US, week.lo)}–${"%.1f".format(Locale.US, week.hi)} $unitLabel"
+                val tooltipStyle = TextStyle(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.W500,
+                    color = inkColor,
+                )
+                val tooltipText = buildAnnotatedString {
+                    withStyle(SpanStyle(color = mutedColor, fontWeight = FontWeight.W500)) {
+                        append("WEEK OF ${weekLabel.uppercase()}")
+                    }
+                    append("\n")
+                    withStyle(SpanStyle(color = lineColor)) { append("Avg  ") }
+                    append(avgText)
+                    append("\n")
+                    withStyle(SpanStyle(color = mutedColor)) { append("Range  ") }
+                    append(rangeText)
+                }
+                val measured = measurer.measure(tooltipText, tooltipStyle)
+                val pad = 10f
+                val tooltipW = measured.size.width + pad * 2f
+                val tooltipH = measured.size.height + pad * 2f
+                var tooltipX = pointX - tooltipW / 2f
+                val minX = padL
+                val maxX = w - padR - tooltipW
+                if (tooltipX < minX) tooltipX = minX
+                if (tooltipX > maxX) tooltipX = maxX
+                val tooltipY = padT + 4f
+                drawRoundRect(
+                    color = cardColor,
+                    topLeft = Offset(tooltipX, tooltipY),
+                    size = Size(tooltipW, tooltipH),
+                    cornerRadius = CornerRadius(10f, 10f),
+                )
+                drawRoundRect(
+                    color = borderColor,
+                    topLeft = Offset(tooltipX, tooltipY),
+                    size = Size(tooltipW, tooltipH),
+                    cornerRadius = CornerRadius(10f, 10f),
+                    style = Stroke(width = 1f),
+                )
+                drawText(
+                    measurer,
+                    tooltipText,
+                    topLeft = Offset(tooltipX + pad, tooltipY + pad),
+                    style = tooltipStyle,
+                )
             }
         }
     }

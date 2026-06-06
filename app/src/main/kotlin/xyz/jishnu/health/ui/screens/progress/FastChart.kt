@@ -1,10 +1,16 @@
 package xyz.jishnu.health.ui.screens.progress
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -12,14 +18,20 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import xyz.jishnu.health.data.constants.Stages
 import xyz.jishnu.health.data.model.DayEntry
 import xyz.jishnu.health.data.model.Units
@@ -48,7 +60,31 @@ fun FastChart(
     val wMinKg = if (weights.isEmpty()) 60.0 else floor(weights.min() - 0.5)
     val wMaxKg = if (weights.isEmpty()) 100.0 else ceil(weights.max() + 0.5)
 
-    Canvas(modifier = modifier.fillMaxWidth().height(220.dp)) {
+    // Index of the day whose tooltip is currently shown. Cleared when the
+    // user taps it again or the data list changes.
+    var selectedIdx by remember(data.size) { mutableStateOf<Int?>(null) }
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .pointerInput(data.size) {
+                detectTapGestures { tap ->
+                    if (data.isEmpty()) return@detectTapGestures
+                    val padLeftPx = 36.dp.toPx()
+                    val padRightPx = 36.dp.toPx()
+                    val innerLeft = padLeftPx
+                    val innerRight = size.width - padRightPx
+                    val innerW = innerRight - innerLeft
+                    val idx = (data.indices).minByOrNull { i ->
+                        val x = if (data.size <= 1) innerLeft + innerW / 2f
+                        else innerLeft + (i.toFloat() / (data.size - 1)) * innerW
+                        kotlin.math.abs(x - tap.x)
+                    } ?: return@detectTapGestures
+                    selectedIdx = if (selectedIdx == idx) null else idx
+                }
+            },
+    ) {
         val w = size.width
         val h = size.height
         val padTop = with(density) { 14.dp.toPx() }
@@ -234,6 +270,97 @@ fun FastChart(
                         style = xLabelStyle,
                     )
                 }
+            }
+
+            // Tap tooltip — vertical guide + highlighted dots + a card with
+            // that day's fasting hours and weight reading.
+            selectedIdx?.takeIf { it in data.indices }?.let { idx ->
+                val d = data[idx]
+                val x = xAt(idx)
+
+                drawLine(
+                    color = c.ink2.copy(alpha = 0.35f),
+                    start = Offset(x, innerTop),
+                    end = Offset(x, innerBottom),
+                    strokeWidth = 1f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f),
+                )
+                if (!d.isPreFastToday) {
+                    drawCircle(
+                        color = c.accent,
+                        radius = with(density) { 4.5.dp.toPx() },
+                        center = Offset(x, fY(d.fastHours)),
+                    )
+                }
+                d.weight?.weightKg?.let { kg ->
+                    drawCircle(
+                        color = c.primary,
+                        radius = with(density) { 5.dp.toPx() },
+                        center = Offset(x, wY(kg)),
+                    )
+                }
+
+                val dateText = d.date.format(
+                    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()),
+                )
+                val fastH = if (d.isPreFastToday) {
+                    "—"
+                } else {
+                    val hh = d.fastHours.toInt()
+                    val mm = ((d.fastHours - hh) * 60).toInt()
+                    "${hh}h ${mm.toString().padStart(2, '0')}m"
+                }
+                val weightStr = d.weight?.weightKg?.let { kg ->
+                    val fmt = WeightMath.fmtWeight(kg, units)
+                    "${fmt.value} ${fmt.unit}"
+                } ?: "—"
+
+                val tooltipStyle = TextStyle(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.W500,
+                    color = c.ink,
+                )
+                val tooltipText = buildAnnotatedString {
+                    withStyle(SpanStyle(color = c.muted, fontWeight = FontWeight.W500)) {
+                        append(dateText.uppercase())
+                    }
+                    append("\n")
+                    withStyle(SpanStyle(color = c.accent)) { append("Fast  ") }
+                    append(fastH)
+                    append("\n")
+                    withStyle(SpanStyle(color = c.primary)) { append("Weight  ") }
+                    append(weightStr)
+                }
+                val tooltipMeasured = measurer.measure(tooltipText, tooltipStyle)
+
+                val pad = with(density) { 10.dp.toPx() }
+                val tooltipW = tooltipMeasured.size.width + 2 * pad
+                val tooltipH = tooltipMeasured.size.height + 2 * pad
+                val gap = with(density) { 6.dp.toPx() }
+                var tooltipX = x - tooltipW / 2f
+                if (tooltipX < innerLeft) tooltipX = innerLeft
+                if (tooltipX + tooltipW > innerRight) tooltipX = innerRight - tooltipW
+                val tooltipY = innerTop + gap
+
+                drawRoundRect(
+                    color = c.card,
+                    topLeft = Offset(tooltipX, tooltipY),
+                    size = Size(tooltipW, tooltipH),
+                    cornerRadius = CornerRadius(10f, 10f),
+                )
+                drawRoundRect(
+                    color = c.border,
+                    topLeft = Offset(tooltipX, tooltipY),
+                    size = Size(tooltipW, tooltipH),
+                    cornerRadius = CornerRadius(10f, 10f),
+                    style = Stroke(width = 1f),
+                )
+                drawText(
+                    measurer,
+                    tooltipText,
+                    topLeft = Offset(tooltipX + pad, tooltipY + pad),
+                    style = tooltipStyle,
+                )
             }
         }
     }
