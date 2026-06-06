@@ -650,18 +650,7 @@ private fun ReturningLowerContent(
                 .background(c.card)
                 .padding(18.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("NEXT FAST", style = IntermTheme.typography.hEyebrow, color = c.muted)
-                Text(
-                    "${state.goalHours}h",
-                    style = IntermTheme.typography.hDisplay.copy(fontSize = 26.sp),
-                    color = c.ink,
-                )
-            }
+            Text("NEXT FAST", style = IntermTheme.typography.hEyebrow, color = c.muted)
             Spacer(Modifier.height(6.dp))
             Text(
                 "${state.goalHours}-hour fast, ${24 - state.goalHours}-hour eating window.",
