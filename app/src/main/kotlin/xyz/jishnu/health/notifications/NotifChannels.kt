@@ -11,11 +11,13 @@ object NotifChannels {
     const val FASTING_REMINDERS = "fasting_reminders"
     const val WEIGHT_REMINDERS = "weight_reminders"
     const val WATER_REMINDERS = "water_reminders"
+    const val FASTING_RESULTS = "fasting_results"
 
     const val STICKY_NOTIFICATION_ID = 1001
     const val FASTING_REMINDER_NOTIFICATION_ID = 1002
     const val WEIGHT_REMINDER_NOTIFICATION_ID = 1003
     const val WATER_REMINDER_NOTIFICATION_ID = 1004
+    const val FAST_ENDED_NOTIFICATION_ID = 1005
 
     fun ensure(context: Context) {
         val manager = context.getSystemService<NotificationManager>() ?: return
@@ -56,6 +58,16 @@ object NotifChannels {
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description = "Nudges to keep your water intake on pace through the day."
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                FASTING_RESULTS,
+                "Fast results",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "Summary notification posted when a fast ends."
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             },
         )
     }

@@ -24,8 +24,21 @@ class NotificationActionReceiver : BroadcastReceiver() {
         scope.launch {
             try {
                 val active = fastingRepo.activeSession.first()
-                active?.let { fastingRepo.endFast(it.id, System.currentTimeMillis()) }
-                FastingForegroundService.stop(context)
+                if (active != null) {
+                    val endMs = System.currentTimeMillis()
+                    fastingRepo.endFast(active.id, endMs)
+                    FastingForegroundService.stop(context)
+                    // Heads-up summary so the user sees the result instead
+                    // of just watching the sticky notification vanish.
+                    val durationMs = (endMs - active.startMs).coerceAtLeast(0L)
+                    ReminderNotifications.postFastEnded(
+                        context = context,
+                        durationMs = durationMs,
+                        goalHours = active.goalHours,
+                    )
+                } else {
+                    FastingForegroundService.stop(context)
+                }
             } finally {
                 pending.finish()
             }

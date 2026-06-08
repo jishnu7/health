@@ -65,6 +65,42 @@ object ReminderNotifications {
             .build()
     }
 
+    /**
+     * Post-fast summary — fires after the user taps "End fast" from the
+     * sticky notification, so they get an immediate confirmation + can jump
+     * back to Home to see the result instead of being left with a quietly-
+     * dismissed sticky.
+     */
+    fun buildFastEnded(context: Context, durationMs: Long, goalHours: Int): Notification {
+        val totalMinutes = (durationMs.coerceAtLeast(0L) / 60_000L).toInt()
+        val h = totalMinutes / 60
+        val m = totalMinutes % 60
+        val goalMet = h * 60 + m >= goalHours * 60
+        val durationLabel = "${h}h ${m.toString().padStart(2, '0')}m"
+        val title = if (goalMet) "Goal reached" else "Fast ended"
+        val body = if (goalMet) {
+            "$durationLabel fasted — past your ${goalHours}h goal."
+        } else {
+            "$durationLabel fasted — short of your ${goalHours}h goal."
+        }
+        return NotificationCompat.Builder(context, NotifChannels.FASTING_RESULTS)
+            .setSmallIcon(R.drawable.ic_notif_fast)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$body Tap to see the summary."))
+            .setAutoCancel(true)
+            .setContentIntent(openAppPending(context, requestCode = 1004, route = null))
+            .build()
+    }
+
+    fun postFastEnded(context: Context, durationMs: Long, goalHours: Int) {
+        val nm = context.getSystemService<NotificationManager>() ?: return
+        nm.notify(
+            NotifChannels.FAST_ENDED_NOTIFICATION_ID,
+            buildFastEnded(context, durationMs, goalHours),
+        )
+    }
+
     fun fireFastingTest(context: Context) {
         val nm = context.getSystemService<NotificationManager>() ?: return
         nm.notify(NotifChannels.FASTING_REMINDER_NOTIFICATION_ID, buildFastingReminder(context))
