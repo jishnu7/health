@@ -124,6 +124,8 @@ fun DayDetailScreen(
                     status = status,
                     onSetStart = vm::setStart,
                     onSetEnd = vm::setEnd,
+                    onSetStartDate = vm::setStartDate,
+                    onSetEndDate = vm::setEndDate,
                     onResume = { vm.resumeFast(onResumed) },
                 )
 
@@ -317,6 +319,8 @@ private fun FastSection(
     status: xyz.jishnu.health.data.model.FastStatus?,
     onSetStart: (String) -> Unit,
     onSetEnd: (String) -> Unit,
+    onSetStartDate: (java.time.LocalDate) -> Unit,
+    onSetEndDate: (java.time.LocalDate) -> Unit,
     onResume: () -> Unit,
 ) {
     Spacer(Modifier.height(20.dp))
@@ -325,9 +329,15 @@ private fun FastSection(
             state = state,
             onSetStart = onSetStart,
             onSetEnd = onSetEnd,
+            onSetStartDate = onSetStartDate,
+            onSetEndDate = onSetEndDate,
             onResume = onResume,
         )
-        state.isOngoing -> OngoingFastBlock(state = state, onSetStart = onSetStart)
+        state.isOngoing -> OngoingFastBlock(
+            state = state,
+            onSetStart = onSetStart,
+            onSetStartDate = onSetStartDate,
+        )
         else -> EmptyDayBlock(state = state, onSetStart = onSetStart)
     }
     Spacer(Modifier.height(8.dp))
@@ -338,25 +348,43 @@ private fun CompletedFastBlock(
     state: xyz.jishnu.health.vm.DayDetailUiState,
     onSetStart: (String) -> Unit,
     onSetEnd: (String) -> Unit,
+    onSetStartDate: (java.time.LocalDate) -> Unit,
+    onSetEndDate: (java.time.LocalDate) -> Unit,
     onResume: () -> Unit,
 ) {
     val plan = xyz.jishnu.health.data.constants.Plans.all.firstOrNull { it.fastHours == state.goalHours }
     val planLabel = plan?.label ?: "${state.goalHours}:${24 - state.goalHours}"
     val startTime = state.startTime ?: "00:00"
     val endTime = state.endTime ?: state.displayedEndTime ?: startTime
-    val summary = rebuildSummary(
-        onDate = state.date,
-        startHhmm = startTime,
-        endHhmm = endTime,
-        goalHours = state.goalHours,
-        planLabel = planLabel,
-        zone = state.zone,
-    )
+    val startDate = state.startDate ?: state.date
+    val endDate = state.endDate ?: state.date
+    // Build the summary from the user-controlled start/end Instants directly
+    // — using rebuildSummary would re-apply its overnight wraparound rule on
+    // top of dates the user already picked.
+    val summary = run {
+        val zone = state.zone
+        val startMs = startDate.atTime(java.time.LocalTime.parse(startTime))
+            .atZone(zone).toInstant().toEpochMilli()
+        val endMs = endDate.atTime(java.time.LocalTime.parse(endTime))
+            .atZone(zone).toInstant().toEpochMilli()
+        val durationH = ((endMs - startMs).coerceAtLeast(0L)) / 3_600_000.0
+        xyz.jishnu.health.ui.components.LastFastSummary(
+            startMs = startMs,
+            endMs = endMs,
+            durationHours = durationH,
+            goalHours = state.goalHours,
+            planLabel = planLabel,
+        )
+    }
     val edit = LastFastEdit(
         startTime = startTime,
         endTime = endTime,
+        startDate = startDate,
+        endDate = endDate,
         onStart = onSetStart,
         onEnd = onSetEnd,
+        onStartDate = onSetStartDate,
+        onEndDate = onSetEndDate,
     )
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ShareableLastFastCard(
@@ -381,12 +409,14 @@ private fun CompletedFastBlock(
 private fun OngoingFastBlock(
     state: xyz.jishnu.health.vm.DayDetailUiState,
     onSetStart: (String) -> Unit,
+    onSetStartDate: (java.time.LocalDate) -> Unit,
 ) {
     val c = IntermTheme.colors
     val durationHours = state.durationHours
     val progress = if (state.goalHours > 0) (durationHours / state.goalHours).coerceIn(0.0, 1.0).toFloat() else 0f
     val goalEndTime = state.startTime?.let { TimeMath.addHoursToTime(it, state.goalHours.toDouble()) }
     var showStartPicker by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -422,6 +452,18 @@ private fun OngoingFastBlock(
         Spacer(Modifier.height(22.dp))
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(c.border))
         Spacer(Modifier.height(18.dp))
+        val dateFmt = DateTimeFormatter.ofPattern("MMM d", java.util.Locale.getDefault())
+        val startDate = state.startDate ?: state.date
+        val startDateLabel = if (state.startTime != null) dateFmt.format(startDate) else null
+        // Goal end may cross into the next calendar day when start + goalH
+        // wraps past midnight — surface that so the user can spot it.
+        val goalCrossesMidnight = state.startTime?.let {
+            val parts = it.split(":")
+            val startHh = parts[0].toIntOrNull() ?: 0
+            startHh + state.goalHours >= 24
+        } ?: false
+        val goalDate = if (goalCrossesMidnight) startDate.plusDays(1) else startDate
+        val goalDateLabel = if (goalEndTime != null) dateFmt.format(goalDate) else null
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -429,8 +471,10 @@ private fun OngoingFastBlock(
             FastMarker(
                 label = "Started",
                 value = state.startTime ?: "—",
+                date = startDateLabel,
                 align = Alignment.Start,
                 onClick = { showStartPicker = true },
+                onDateClick = if (state.startTime != null) ({ showStartDatePicker = true }) else null,
             )
             val remainingH = (state.goalHours - durationHours).coerceAtLeast(0.0)
             val rh = remainingH.toInt()
@@ -443,6 +487,7 @@ private fun OngoingFastBlock(
             FastMarker(
                 label = "Goal",
                 value = goalEndTime ?: "—",
+                date = goalDateLabel,
                 align = Alignment.End,
             )
         }
@@ -453,6 +498,13 @@ private fun OngoingFastBlock(
             initial = state.startTime ?: "08:00",
             onDismiss = { showStartPicker = false },
             onConfirm = { showStartPicker = false; onSetStart(it) },
+        )
+    }
+    if (showStartDatePicker) {
+        xyz.jishnu.health.ui.components.DatePickerDialog(
+            initial = state.startDate ?: state.date,
+            onDismiss = { showStartDatePicker = false },
+            onConfirm = { showStartDatePicker = false; onSetStartDate(it) },
         )
     }
 }
@@ -482,6 +534,12 @@ private fun EmptyDayBlock(
             }
         }
         Spacer(Modifier.height(20.dp))
+        val emptyDateFmt = DateTimeFormatter.ofPattern("MMM d", java.util.Locale.getDefault())
+        val emptyStartDateLabel = if (state.startTime != null) {
+            emptyDateFmt.format(state.startDate ?: state.date)
+        } else {
+            null
+        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -489,6 +547,7 @@ private fun EmptyDayBlock(
             FastMarker(
                 label = "Started",
                 value = state.startTime ?: "—",
+                date = emptyStartDateLabel,
                 align = Alignment.Start,
                 onClick = { showStartPicker = true },
             )
@@ -511,39 +570,74 @@ private fun FastMarker(
     value: String,
     align: Alignment.Horizontal,
     onClick: (() -> Unit)? = null,
+    date: String? = null,
+    onDateClick: (() -> Unit)? = null,
 ) {
     val c = IntermTheme.colors
-    val editable = onClick != null
-    Column(
-        horizontalAlignment = align,
-        modifier = if (editable) {
-            Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .clickable(onClick = onClick!!)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        } else {
-            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        },
-    ) {
+    val timeEditable = onClick != null
+    val dateEditable = onDateClick != null
+    Column(horizontalAlignment = align) {
         Text(label, style = IntermTheme.typography.caption, color = c.muted)
         Spacer(Modifier.height(2.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = if (timeEditable) {
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onClick!!)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            } else {
+                Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            },
+        ) {
             Text(
                 value,
                 style = IntermTheme.typography.mono.copy(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.W500,
-                    textDecoration = if (editable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                    textDecoration = if (timeEditable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
                 ),
-                color = if (editable) c.primary else c.ink2,
+                color = if (timeEditable) c.primary else c.ink2,
             )
-            if (editable) {
+            if (timeEditable) {
                 Icon(
                     IntermIcons.ChevronDown,
-                    contentDescription = "Edit",
+                    contentDescription = "Edit time",
                     tint = c.primary,
                     modifier = Modifier.size(12.dp),
                 )
+            }
+        }
+        if (date != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = if (dateEditable) {
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onDateClick!!)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                } else {
+                    Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                },
+            ) {
+                Text(
+                    date,
+                    style = IntermTheme.typography.caption.copy(
+                        fontSize = 11.sp,
+                        textDecoration = if (dateEditable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                    ),
+                    color = if (dateEditable) c.primary else c.muted,
+                )
+                if (dateEditable) {
+                    Icon(
+                        IntermIcons.ChevronDown,
+                        contentDescription = "Edit date",
+                        tint = c.primary,
+                        modifier = Modifier.size(10.dp),
+                    )
+                }
             }
         }
     }

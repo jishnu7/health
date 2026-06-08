@@ -25,7 +25,10 @@ fun TimePickerDialog(
     onConfirm: (String) -> Unit,
 ) {
     val (initHour, initMinute) = initial.split(":").let { it[0].toInt() to it[1].toInt() }
-    val state = rememberTimePickerState(initialHour = initHour, initialMinute = initMinute, is24Hour = true)
+    // The picker is rendered as 12-hour with an AM/PM toggle, but state.hour
+    // still comes back in 24h form so the onConfirm payload (HH:mm) stays
+    // unchanged from the caller's perspective.
+    val state = rememberTimePickerState(initialHour = initHour, initialMinute = initMinute, is24Hour = false)
     val c = IntermTheme.colors
 
     Dialog(onDismissRequest = onDismiss) {

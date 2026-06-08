@@ -75,16 +75,21 @@ data class LastFastSummary(
 )
 
 /**
- * Editable handles for the Started/Ended labels in [LastFastCard]. When
- * non-null, tapping either marker opens a time picker and the new wall-clock
- * value is propagated up so callers can rebuild a [LastFastSummary] for the
- * edited day.
+ * Editable handles for the Started/Ended markers in [LastFastCard]. Time taps
+ * fire the `onStart` / `onEnd` callbacks with `HH:mm`; date taps fire
+ * `onStartDate` / `onEndDate` with the user-picked [LocalDate]. The current
+ * date pair is supplied so the date picker can pre-select correctly when
+ * opened.
  */
 data class LastFastEdit(
     val startTime: String,
     val endTime: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
     val onStart: (String) -> Unit,
     val onEnd: (String) -> Unit,
+    val onStartDate: (LocalDate) -> Unit,
+    val onEndDate: (LocalDate) -> Unit,
 )
 
 private val HeaderGradientStops = arrayOf(
@@ -219,9 +224,17 @@ fun LastFastCard(
 
             val startTimeLabel = TimeMath.fmtTime(start, zone)
             val endTimeLabel = if (summary.isOngoing) "Ongoing" else TimeMath.fmtTime(end, zone)
+            // Calendar date sits below the wall-clock time so the user can
+            // sanity-check (and, in edit mode, see when) our auto-inferred
+            // start day might be off — overnight or multi-day spans.
+            val dateFormatter = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+            val startDateLabel = dateFormatter.format(start.atZone(zone).toLocalDate())
+            val endDateLabel = if (summary.isOngoing) null else dateFormatter.format(end.atZone(zone).toLocalDate())
 
             var showStartPicker by remember { mutableStateOf(false) }
             var showEndPicker by remember { mutableStateOf(false) }
+            var showStartDatePicker by remember { mutableStateOf(false) }
+            var showEndDatePicker by remember { mutableStateOf(false) }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -231,8 +244,10 @@ fun LastFastCard(
                 MarkerColumn(
                     label = "Started",
                     value = startTimeLabel,
+                    date = startDateLabel,
                     align = Alignment.Start,
                     onClick = edit?.let { { showStartPicker = true } },
+                    onDateClick = edit?.let { { showStartDatePicker = true } },
                 )
                 Row(
                     modifier = Modifier.weight(1f).widthIn(min = 60.dp),
@@ -250,8 +265,10 @@ fun LastFastCard(
                 MarkerColumn(
                     label = if (summary.isOngoing) "Status" else "Ended",
                     value = endTimeLabel,
+                    date = endDateLabel,
                     align = Alignment.End,
                     onClick = if (summary.isOngoing) null else edit?.let { { showEndPicker = true } },
+                    onDateClick = if (summary.isOngoing) null else edit?.let { { showEndDatePicker = true } },
                 )
             }
 
@@ -272,6 +289,26 @@ fun LastFastCard(
                     onConfirm = {
                         showEndPicker = false
                         edit.onEnd(it)
+                    },
+                )
+            }
+            if (edit != null && showStartDatePicker) {
+                DatePickerDialog(
+                    initial = edit.startDate,
+                    onDismiss = { showStartDatePicker = false },
+                    onConfirm = {
+                        showStartDatePicker = false
+                        edit.onStartDate(it)
+                    },
+                )
+            }
+            if (edit != null && showEndDatePicker) {
+                DatePickerDialog(
+                    initial = edit.endDate,
+                    onDismiss = { showEndDatePicker = false },
+                    onConfirm = {
+                        showEndDatePicker = false
+                        edit.onEndDate(it)
                     },
                 )
             }
@@ -495,42 +532,77 @@ private fun MarkerColumn(
     value: String,
     align: Alignment.Horizontal,
     onClick: (() -> Unit)?,
+    date: String? = null,
+    onDateClick: (() -> Unit)? = null,
 ) {
     val c = IntermTheme.colors
-    val editable = onClick != null
-    // No horizontal padding — the column's start (or end) edge needs to align
-    // with the "STAGE REACHED" eyebrow / stage chip in the rows above. Vertical
-    // padding stays so the tap target has some breathing room when editable.
-    Column(
-        horizontalAlignment = align,
-        modifier = if (editable) {
-            Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .clickable(onClick = onClick!!)
-                .padding(vertical = 4.dp)
-        } else {
-            Modifier.padding(vertical = 4.dp)
-        },
-    ) {
+    val timeEditable = onClick != null
+    val dateEditable = onDateClick != null
+    // The label, time row and date row are stacked but each can have its own
+    // tap target — taps on the time open a time picker; taps on the date
+    // open a date picker.
+    Column(horizontalAlignment = align) {
         Text(label, style = IntermTheme.typography.caption, color = c.muted)
         Spacer(Modifier.height(2.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = if (timeEditable) {
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onClick!!)
+                    .padding(vertical = 2.dp)
+            } else {
+                Modifier.padding(vertical = 2.dp)
+            },
+        ) {
             Text(
                 value,
                 style = IntermTheme.typography.mono.copy(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.W500,
-                    textDecoration = if (editable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                    textDecoration = if (timeEditable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
                 ),
-                color = if (editable) c.primary else c.ink,
+                color = if (timeEditable) c.primary else c.ink,
             )
-            if (editable) {
+            if (timeEditable) {
                 Icon(
                     IntermIcons.ChevronDown,
-                    contentDescription = "Edit",
+                    contentDescription = "Edit time",
                     tint = c.primary,
                     modifier = Modifier.size(12.dp),
                 )
+            }
+        }
+        if (date != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = if (dateEditable) {
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onDateClick!!)
+                        .padding(vertical = 2.dp)
+                } else {
+                    Modifier.padding(vertical = 2.dp)
+                },
+            ) {
+                Text(
+                    date,
+                    style = IntermTheme.typography.caption.copy(
+                        fontSize = 11.sp,
+                        textDecoration = if (dateEditable) androidx.compose.ui.text.style.TextDecoration.Underline else null,
+                    ),
+                    color = if (dateEditable) c.primary else c.muted,
+                )
+                if (dateEditable) {
+                    Icon(
+                        IntermIcons.ChevronDown,
+                        contentDescription = "Edit date",
+                        tint = c.primary,
+                        modifier = Modifier.size(10.dp),
+                    )
+                }
             }
         }
     }

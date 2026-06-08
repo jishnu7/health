@@ -51,6 +51,12 @@ data class DayDetailUiState(
      * calculation in this VM matches what [FastingViewModel] shows on Home.
      */
     val startDate: LocalDate? = null,
+    /**
+     * Calendar day the end instant lives on. Defaults to the dayKey's [date]
+     * (end-day bucketing) but the user can override it for multi-day fasts
+     * where the heuristic gets it wrong.
+     */
+    val endDate: LocalDate? = null,
     val otherActiveSession: Boolean = false,
 ) {
     private val startInstantMs: Long?
@@ -58,9 +64,22 @@ data class DayDetailUiState(
             (startDate ?: date).atTime(TimeMath.parseTime(it)).atZone(zone).toInstant().toEpochMilli()
         }
 
+    private val endInstantMs: Long?
+        get() = endTime?.let {
+            (endDate ?: date).atTime(TimeMath.parseTime(it)).atZone(zone).toInstant().toEpochMilli()
+        }
+
     val durationHours: Double = when {
         startTime == null -> 0.0
-        endTime != null -> TimeMath.diffHoursTime(startTime, endTime)
+        endTime != null -> {
+            val sMs = startInstantMs
+            val eMs = endInstantMs
+            if (sMs != null && eMs != null) {
+                max(0L, eMs - sMs) / 3_600_000.0
+            } else {
+                TimeMath.diffHoursTime(startTime, endTime)
+            }
+        }
         isOngoing -> startInstantMs?.let { max(0L, nowMs - it) / 3_600_000.0 } ?: 0.0
         else -> 0.0
     }
@@ -151,17 +170,20 @@ class DayDetailViewModel @Inject constructor(
         val endStr: String?
         val isOngoing: Boolean
         val startDate: LocalDate?
+        val endDate: LocalDate?
 
         if (session != null) {
             val startZdt = Instant.ofEpochMilli(session.startMs).atZone(zone)
             startStr = fmtLt(startZdt.toLocalTime())
             startDate = startZdt.toLocalDate()
             if (session.endMs != null) {
-                val endLt = Instant.ofEpochMilli(session.endMs).atZone(zone).toLocalTime()
-                endStr = fmtLt(endLt)
+                val endZdt = Instant.ofEpochMilli(session.endMs).atZone(zone)
+                endStr = fmtLt(endZdt.toLocalTime())
+                endDate = endZdt.toLocalDate()
                 isOngoing = false
             } else {
                 endStr = null
+                endDate = null
                 isOngoing = true
             }
         } else {
@@ -169,6 +191,7 @@ class DayDetailViewModel @Inject constructor(
             endStr = null
             isOngoing = false
             startDate = null
+            endDate = null
         }
 
         _state.value = DayDetailUiState(
@@ -191,6 +214,7 @@ class DayDetailViewModel @Inject constructor(
             waterMl = waterMl,
             waterGoalMl = settings.waterGoalMl,
             startDate = startDate,
+            endDate = endDate,
             // An active session counts as "other" only if it's not the one we
             // just loaded. The Resume button uses this to refuse when a
             // different fast is already running.
@@ -209,7 +233,20 @@ class DayDetailViewModel @Inject constructor(
     }
 
     fun setEnd(hhmm: String) {
-        _state.update { it.copy(endTime = hhmm, isOngoing = false) }
+        _state.update { s ->
+            // Mirror setStart: anchor a brand-new end to the dayKey's date.
+            // Existing sessions keep whatever endDate load() captured.
+            val endDate = s.endDate ?: s.date
+            s.copy(endTime = hhmm, endDate = endDate, isOngoing = false)
+        }
+    }
+
+    fun setStartDate(date: LocalDate) {
+        _state.update { it.copy(startDate = date) }
+    }
+
+    fun setEndDate(date: LocalDate) {
+        _state.update { it.copy(endDate = date) }
     }
 
     fun setNotes(value: String) { _state.update { it.copy(notes = value) } }
@@ -247,7 +284,11 @@ class DayDetailViewModel @Inject constructor(
                     s.date.atTime(startLt).atZone(zone).toInstant().toEpochMilli()
             }
             val endInstant: Long? = endLt?.let { lt ->
-                s.date.atTime(lt).atZone(zone).toInstant().toEpochMilli()
+                // Prefer the user-picked / loaded endDate. Fall back to the
+                // dayKey's date (end-day bucketing) for legacy sessions that
+                // never had endDate populated.
+                val endDate = s.endDate ?: s.date
+                endDate.atTime(lt).atZone(zone).toInstant().toEpochMilli()
             }
             if (existing != null) {
                 fastingRepo.updateSession(
