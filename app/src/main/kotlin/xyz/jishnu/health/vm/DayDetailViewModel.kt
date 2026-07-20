@@ -33,6 +33,14 @@ data class DayDetailUiState(
     val endTime: String? = null,
     val weightKg: Double = 70.0,
     val previousWeightKg: Double? = null,
+    /**
+     * True once the user actually touches the weight control. Until then the
+     * shown [weightKg] is only a placeholder (last reading, or 70.0) for the
+     * stepper — saving must NOT persist it, or days the user never weighed get
+     * a fake reading that pollutes the trend. Mirrors the session fields, which
+     * stay blank for the same reason.
+     */
+    val weightEdited: Boolean = false,
     val notes: String = "",
     val units: Units = Units.Metric,
     val goalHours: Int = 16,
@@ -250,8 +258,8 @@ class DayDetailViewModel @Inject constructor(
     }
 
     fun setNotes(value: String) { _state.update { it.copy(notes = value) } }
-    fun setWeightKg(kg: Double) { _state.update { it.copy(weightKg = kg) } }
-    fun bumpWeightKg(deltaKg: Double) { _state.update { it.copy(weightKg = it.weightKg + deltaKg) } }
+    fun setWeightKg(kg: Double) { _state.update { it.copy(weightKg = kg, weightEdited = true) } }
+    fun bumpWeightKg(deltaKg: Double) { _state.update { it.copy(weightKg = it.weightKg + deltaKg, weightEdited = true) } }
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
@@ -305,7 +313,13 @@ class DayDetailViewModel @Inject constructor(
                 }
             }
         }
-        weightRepo.upsertForDay(s.dayKey, s.weightKg, s.notes.ifBlank { null })
+        // Only persist weight when the user actually entered one, or when this
+        // day already has a real reading to update. Otherwise the placeholder
+        // (last reading / 70.0) shown in the stepper would be saved as a fake
+        // entry, dragging the weight trend toward the default.
+        if (s.weightEdited || s.weightId != null) {
+            weightRepo.upsertForDay(s.dayKey, s.weightKg, s.notes.ifBlank { null })
+        }
         onDone()
     }
 

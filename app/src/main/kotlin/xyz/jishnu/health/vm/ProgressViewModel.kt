@@ -56,12 +56,15 @@ class ProgressViewModel @Inject constructor(
         val today = LocalDate.now()
         val (from, to) = range.range(today).let { it.start to it.endInclusive }
         val zone = ZoneId.systemDefault()
-        val merged = DayEntries.merge(sessions, weights, zone)
+        // Carry weight forward across the full history first, then clip to the
+        // range — so a day at the range's start can inherit a weight recorded
+        // before the range instead of reading as a gap.
+        val merged = DayEntries.withCarriedWeight(DayEntries.merge(sessions, weights, zone))
             .filter { it.date >= from && it.date <= to }
             .sortedBy { it.dayKey }
 
-        val firstWeight = merged.firstOrNull { it.weight != null }?.weight?.weightKg
-        val lastWeight = merged.lastOrNull { it.weight != null }?.weight?.weightKg
+        val firstWeight = merged.firstOrNull { it.effectiveWeightKg != null }?.effectiveWeightKg
+        val lastWeight = merged.lastOrNull { it.effectiveWeightKg != null }?.effectiveWeightKg
         val change = if (firstWeight != null && lastWeight != null) lastWeight - firstWeight else 0.0
         // Exclude today's pre-fast row from fasting summaries so the morning
         // 0h 0m doesn't poison the average / streak / goal-met counts. The

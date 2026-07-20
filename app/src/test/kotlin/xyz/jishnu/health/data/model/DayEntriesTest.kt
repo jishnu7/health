@@ -1,6 +1,7 @@
 package xyz.jishnu.health.data.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -22,8 +23,9 @@ class DayEntriesTest {
     }
 
     @Test fun `merge groups by day and sorts desc`() {
-        val s1 = FastingSessionEntity(id = 1, startMs = day(2026, 5, 24) + 20 * 3_600_000L, endMs = day(2026, 5, 25) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
-        val s2 = FastingSessionEntity(id = 2, startMs = day(2026, 5, 25) + 20 * 3_600_000L, endMs = null, goalHours = 16, planId = "16:8")
+        // Sessions bucket by the day they END on (see DayEntries.merge).
+        val s1 = FastingSessionEntity(id = 1, startMs = day(2026, 5, 23) + 20 * 3_600_000L, endMs = day(2026, 5, 24) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val s2 = FastingSessionEntity(id = 2, startMs = day(2026, 5, 24) + 20 * 3_600_000L, endMs = day(2026, 5, 25) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
         val w1 = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 24), weightKg =178.0, createdMs = 0)
         val w2 = WeightEntryEntity(id = 2, dayKey = day(2026, 5, 25), weightKg =177.8, createdMs = 0)
 
@@ -52,6 +54,42 @@ class DayEntriesTest {
         assertEquals(16.0, merged[0].fastHours, 0.0001)
         assertEquals(21.0, merged[0].totalFastHours, 0.0001)
         assertEquals(2, merged[0].sessionCount)
+    }
+
+    @Test fun `withCarriedWeight carries last recorded weight into weightless days`() {
+        val wStart = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 20), weightKg = 80.0, createdMs = 0)
+        val fast21 = FastingSessionEntity(id = 1, startMs = day(2026, 5, 20) + 20 * 3_600_000L, endMs = day(2026, 5, 21) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val fast22 = FastingSessionEntity(id = 2, startMs = day(2026, 5, 21) + 20 * 3_600_000L, endMs = day(2026, 5, 22) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val wEnd = WeightEntryEntity(id = 2, dayKey = day(2026, 5, 23), weightKg = 79.0, createdMs = 0)
+
+        val merged = DayEntries.merge(listOf(fast21, fast22), listOf(wStart, wEnd), utc)
+        val carried = DayEntries.withCarriedWeight(merged).sortedBy { it.dayKey }
+
+        assertEquals(4, carried.size)
+        // 05-20: recorded 80.0
+        assertEquals(80.0, carried[0].effectiveWeightKg!!, 0.0)
+        assertTrue(carried[0].hasRecordedWeight)
+        // 05-21 & 05-22: weightless fasting days carry 80.0 forward
+        assertEquals(80.0, carried[1].effectiveWeightKg!!, 0.0)
+        assertFalse(carried[1].hasRecordedWeight)
+        assertEquals(80.0, carried[2].effectiveWeightKg!!, 0.0)
+        assertFalse(carried[2].hasRecordedWeight)
+        // 05-23: a new recording overrides the carry
+        assertEquals(79.0, carried[3].effectiveWeightKg!!, 0.0)
+        assertTrue(carried[3].hasRecordedWeight)
+    }
+
+    @Test fun `withCarriedWeight does not fill before the first recorded weight`() {
+        val fastEarly = FastingSessionEntity(id = 1, startMs = day(2026, 5, 18) + 20 * 3_600_000L, endMs = day(2026, 5, 19) + 12 * 3_600_000L, goalHours = 16, planId = "16:8")
+        val w = WeightEntryEntity(id = 1, dayKey = day(2026, 5, 20), weightKg = 80.0, createdMs = 0)
+
+        val merged = DayEntries.merge(listOf(fastEarly), listOf(w), utc)
+        val carried = DayEntries.withCarriedWeight(merged).sortedBy { it.dayKey }
+
+        // 05-19 precedes every recording → nothing to carry
+        assertNull(carried[0].effectiveWeightKg)
+        assertFalse(carried[0].hasRecordedWeight)
+        assertEquals(80.0, carried[1].effectiveWeightKg!!, 0.0)
     }
 
     @Test fun `single completed session`() {

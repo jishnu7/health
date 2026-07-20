@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import xyz.jishnu.health.data.local.FastingSessionDao
 import xyz.jishnu.health.data.local.IntermDatabase
+import xyz.jishnu.health.data.local.MIGRATION_3_4
 import xyz.jishnu.health.data.local.ProfileDataStore
 import xyz.jishnu.health.data.local.SettingsDataStore
 import xyz.jishnu.health.data.local.WaterEntryDao
@@ -38,6 +39,7 @@ object DataModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): IntermDatabase =
         Room.databaseBuilder(ctx, IntermDatabase::class.java, "interm.db")
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
 

@@ -18,7 +18,19 @@ data class DayEntry(
     val sessions: List<FastingSessionEntity>,
     val weight: WeightEntryEntity?,
     val nowMs: Long = System.currentTimeMillis(),
+    /**
+     * Last weight recorded on an earlier day, carried forward when this day has
+     * no recording of its own. Filled by [DayEntries.withCarriedWeight]; null on
+     * a raw [merge] result and on days that precede the first-ever recording.
+     */
+    val carriedWeightKg: Double? = null,
 ) {
+    /** True when this day has its own weight reading (as opposed to a carried one). */
+    val hasRecordedWeight: Boolean = weight != null
+
+    /** The day's recorded weight, or the carried-forward weight, or null if neither exists. */
+    val effectiveWeightKg: Double? = weight?.weightKg ?: carriedWeightKg
+
     val ongoingSession: FastingSessionEntity? = sessions.firstOrNull { it.endMs == null }
     val isOngoing: Boolean = ongoingSession != null
 
@@ -102,5 +114,28 @@ object DayEntries {
             )
         }
         return entries
+    }
+
+    /**
+     * Fill each weightless day's [DayEntry.carriedWeightKg] with the most recent
+     * weight recorded on an earlier day, so weight reads as continuous while
+     * fasting legitimately drops to zero. Days before the first-ever recording
+     * keep a null weight (nothing to carry). Input order is preserved.
+     */
+    fun withCarriedWeight(entries: List<DayEntry>): List<DayEntry> {
+        val carriedByKey = HashMap<Long, Double>()
+        var lastRecordedKg: Double? = null
+        for (e in entries.sortedBy { it.dayKey }) {
+            val recorded = e.weight?.weightKg
+            if (recorded != null) {
+                lastRecordedKg = recorded
+            } else if (lastRecordedKg != null) {
+                carriedByKey[e.dayKey] = lastRecordedKg
+            }
+        }
+        return entries.map { e ->
+            val carried = carriedByKey[e.dayKey]
+            if (carried != null) e.copy(carriedWeightKg = carried) else e
+        }
     }
 }

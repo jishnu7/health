@@ -45,13 +45,11 @@ import androidx.compose.ui.unit.sp
 import xyz.jishnu.health.data.local.WeightEntryEntity
 import xyz.jishnu.health.data.model.Units
 import xyz.jishnu.health.domain.WeightMath
+import xyz.jishnu.health.domain.WeightTrend
+import xyz.jishnu.health.domain.WeeklyStat
 import xyz.jishnu.health.ui.theme.IntermTheme
-import java.time.DayOfWeek
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.abs
 
@@ -73,7 +71,7 @@ fun WeightTrendCard(
     weeks: Int = 8,
 ) {
     val c = IntermTheme.colors
-    val weeklyAll = buildWeekly(entries)
+    val weeklyAll = WeightTrend.buildWeekly(entries)
     if (weeklyAll.isEmpty()) return
     val weekly = weeklyAll.takeLast(weeks)
 
@@ -398,37 +396,7 @@ private fun TrendChart(weekly: List<WeeklyStat>, units: Units) {
     }
 }
 
-private data class WeeklyStat(
-    val weekStart: LocalDate,
-    val minKg: Double,
-    val maxKg: Double,
-    val avgKg: Double,
-)
-
 private data class DisplayWeek(val lo: Float, val hi: Float, val avg: Float, val date: LocalDate)
-
-private fun buildWeekly(entries: List<WeightEntryEntity>): List<WeeklyStat> {
-    if (entries.isEmpty()) return emptyList()
-    val zone = ZoneId.systemDefault()
-    val withDates = entries.map { entry ->
-        val date = Instant.ofEpochMilli(entry.dayKey).atZone(zone).toLocalDate()
-        date to entry.weightKg
-    }.sortedBy { it.first }
-    val groups = withDates.groupBy { (date, _) -> isoWeekStart(date) }
-        .toSortedMap()
-    return groups.map { (weekStart, list) ->
-        val kgs = list.map { it.second }
-        WeeklyStat(
-            weekStart = weekStart,
-            minKg = kgs.min(),
-            maxKg = kgs.max(),
-            avgKg = kgs.average(),
-        )
-    }
-}
-
-private fun isoWeekStart(date: LocalDate): LocalDate =
-    date.minus(((date.dayOfWeek.value - DayOfWeek.MONDAY.value) + 7) % 7L, ChronoUnit.DAYS)
 
 private fun displayWeight(weightKg: Double, units: Units): Float = when (units) {
     Units.Metric -> weightKg.toFloat()

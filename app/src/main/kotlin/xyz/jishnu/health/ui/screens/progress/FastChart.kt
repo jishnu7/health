@@ -230,11 +230,14 @@ fun FastChart(
                 )
             }
 
-            // Weight line (primary, 2.2dp)
-            val weightPoints = data.mapIndexedNotNull { i, d -> d.weight?.let { i to it.weightKg } }
-            if (weightPoints.isNotEmpty()) {
+            // Weight line (primary, 2.2dp). The line runs through the effective
+            // weight — real readings plus days that carry the last reading
+            // forward — so it stays continuous across gaps. Only real readings
+            // get a dot; carried days are line-only.
+            val weightLine = data.mapIndexedNotNull { i, d -> d.effectiveWeightKg?.let { i to it } }
+            if (weightLine.isNotEmpty()) {
                 val weightPath = Path().apply {
-                    weightPoints.forEachIndexed { idx, (i, kg) ->
+                    weightLine.forEachIndexed { idx, (i, kg) ->
                         val x = xAt(i)
                         val y = wY(kg)
                         if (idx == 0) moveTo(x, y) else lineTo(x, y)
@@ -245,7 +248,8 @@ fun FastChart(
                     color = c.primary,
                     style = Stroke(width = with(density) { 2.2.dp.toPx() }),
                 )
-                weightPoints.forEach { (i, kg) ->
+                data.forEachIndexed { i, d ->
+                    val kg = d.weight?.weightKg ?: return@forEachIndexed
                     val center = Offset(xAt(i), wY(kg))
                     drawCircle(color = c.bg, radius = with(density) { 3.dp.toPx() }, center = center)
                     drawCircle(
@@ -310,7 +314,7 @@ fun FastChart(
                     val mm = ((d.fastHours - hh) * 60).toInt()
                     "${hh}h ${mm.toString().padStart(2, '0')}m"
                 }
-                val weightStr = d.weight?.weightKg?.let { kg ->
+                val weightStr = d.effectiveWeightKg?.let { kg ->
                     val fmt = WeightMath.fmtWeight(kg, units)
                     "${fmt.value} ${fmt.unit}"
                 } ?: "—"
