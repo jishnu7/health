@@ -5,7 +5,7 @@ import xyz.jishnu.health.data.model.DayEntries
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** One day's cell. [level] is 0 (no fast) .. 4 (goal met). */
+/** One day's cell. [level]: 0 no fast, 1 short, 2 under goal, 3 goal met, 4 exceeded goal. */
 data class CalendarDay(
     val dayKey: Long,
     val date: LocalDate,
@@ -40,13 +40,19 @@ object FastingCalendarBuilder {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     )
 
+    /**
+     * Cell intensity: 0 no fast; 1 short (<half goal); 2 under goal; 3 goal met
+     * ([goal, goal+1h)); 4 exceeded (>= goal + 1h). Met and exceeded are split so
+     * a long fast reads darker than one that just reached the goal.
+     */
     fun level(fastHours: Double, goalHours: Int): Int {
         if (fastHours <= 0.0) return 0
         if (goalHours <= 0) return 4
-        return when (fastHours / goalHours) {
-            in 1.0..Double.MAX_VALUE -> 4
-            in 0.85..1.0 -> 3
-            in 0.5..0.85 -> 2
+        val goal = goalHours.toDouble()
+        return when {
+            fastHours >= goal + 1.0 -> 4
+            fastHours >= goal -> 3
+            fastHours >= goal * 0.5 -> 2
             else -> 1
         }
     }
@@ -91,7 +97,8 @@ object FastingCalendarBuilder {
                 val lvl = level(hours, goalHours)
                 column.add(CalendarDay(dayKey, date, hours, lvl))
                 if (hours > 0.0) daysFasted++
-                if (lvl == 4) {
+                // Reaching the goal (met or exceeded) counts toward the stats.
+                if (lvl >= 3) {
                     goalMetDays++
                     streak++
                     longest = maxOf(longest, streak)
