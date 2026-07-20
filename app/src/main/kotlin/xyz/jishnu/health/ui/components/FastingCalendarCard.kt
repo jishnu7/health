@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.Box
 import xyz.jishnu.health.domain.FastingCalendar
 import xyz.jishnu.health.ui.theme.IntermTheme
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Level 0..4 intensity ramp, tuned per theme (index = CalendarDay.level). */
 @Composable
@@ -76,7 +75,6 @@ fun FastingCalendarCard(
 
     val monthStyle = IntermTheme.typography.mono.copy(fontSize = 9.5.sp, color = c.muted)
     val dowStyle = IntermTheme.typography.mono.copy(fontSize = 9.sp, color = c.muted)
-    val dateFmt = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
 
     IntermCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -128,6 +126,7 @@ fun FastingCalendarCard(
                                 detectTapGestures { tap ->
                                     val strideP = rowStride.toPx()
                                     val top = monthH.toPx()
+                                    if (tap.y < top) return@detectTapGestures
                                     val col = (tap.x / strideP).toInt()
                                     val row = ((tap.y - top) / strideP).toInt()
                                     if (col in calendar.weeks.indices && row in 0..6) {
@@ -200,7 +199,9 @@ fun FastingCalendarCard(
     }
 
     // Open scrolled to the most recent weeks.
-    LaunchedEffect(calendar.weeks.size) { scroll.scrollTo(scroll.maxValue) }
+    LaunchedEffect(calendar.weeks.size, scroll.maxValue) {
+        if (scroll.maxValue > 0) scroll.scrollTo(scroll.maxValue)
+    }
 }
 
 @Composable
