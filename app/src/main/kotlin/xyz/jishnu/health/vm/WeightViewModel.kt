@@ -50,11 +50,16 @@ class WeightViewModel @Inject constructor(
         profileRepo.profile,
         draftKg.asStateFlow(),
     ) { recent, settings, profile, draft ->
-        val previous = recent.firstOrNull()
+        val todayKey = DayEntries.dayKeyFor(System.currentTimeMillis())
+        val todayEntry = recent.firstOrNull { it.dayKey == todayKey }
+        // "Previous" — the baseline for the Change readout — is the most recent
+        // reading from a day *other than today*, so re-saving or editing today's
+        // weight is compared against the prior reading, never against itself.
+        val previous = recent.firstOrNull { it.dayKey != todayKey }
         WeightUiState(
             units = settings.units,
             previous = previous,
-            draftKg = draft ?: previous?.weightKg ?: defaultKg,
+            draftKg = draft ?: todayEntry?.weightKg ?: previous?.weightKg ?: defaultKg,
             recent = recent,
             sex = profile.sex,
             heightCm = profile.heightCm,
@@ -67,12 +72,17 @@ class WeightViewModel @Inject constructor(
 
     fun setDraftKg(kg: Double) { draftKg.value = kg }
     fun bumpDraftKg(deltaKg: Double) {
-        draftKg.value = (draftKg.value ?: state.value.previous?.weightKg ?: defaultKg) + deltaKg
+        // Bump from the value currently shown in the stepper (today's reading if
+        // logged, else the last recorded weight), not the Change baseline.
+        draftKg.value = (state.value.draftKg ?: defaultKg) + deltaKg
     }
 
     fun save(notes: String? = null, onSaved: () -> Unit = {}) = viewModelScope.launch {
-        val kg = draftKg.value ?: state.value.previous?.weightKg ?: return@launch
         val today = DayEntries.dayKeyFor(System.currentTimeMillis())
+        val kg = draftKg.value
+            ?: repo.findByDay(today)?.weightKg      // keep today's own value if untouched
+            ?: state.value.previous?.weightKg        // else carry the last recorded weight
+            ?: return@launch                          // nothing to base a reading on
         repo.upsertForDay(today, kg, notes)
         onSaved()
     }
