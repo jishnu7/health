@@ -11,9 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import xyz.jishnu.health.data.model.DayEntries
 import xyz.jishnu.health.data.repo.FastingRepository
 import xyz.jishnu.health.data.repo.SettingsRepository
 import xyz.jishnu.health.data.repo.WaterRepository
+import xyz.jishnu.health.data.repo.WeightRepository
 import xyz.jishnu.health.domain.WaterReminders
 import java.time.LocalDate
 import java.time.ZoneId
@@ -25,6 +27,7 @@ class ReminderReceiver : BroadcastReceiver() {
     @Inject lateinit var settingsRepo: SettingsRepository
     @Inject lateinit var fastingRepo: FastingRepository
     @Inject lateinit var waterRepo: WaterRepository
+    @Inject lateinit var weightRepo: WeightRepository
     @Inject lateinit var scheduler: ReminderScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -52,10 +55,16 @@ class ReminderReceiver : BroadcastReceiver() {
                     }
                     ReminderScheduler.Kind.WeighIn.action -> {
                         if (settings.weightReminderOn) {
-                            nm?.notify(
-                                NotifChannels.WEIGHT_REMINDER_NOTIFICATION_ID,
-                                ReminderNotifications.buildWeighInReminder(context),
-                            )
+                            // Skip the nudge if today's weight is already logged —
+                            // no point asking the user to weigh in when they have.
+                            val todayKey = DayEntries.dayKeyFor(System.currentTimeMillis())
+                            val alreadyLogged = weightRepo.findByDay(todayKey) != null
+                            if (!alreadyLogged) {
+                                nm?.notify(
+                                    NotifChannels.WEIGHT_REMINDER_NOTIFICATION_ID,
+                                    ReminderNotifications.buildWeighInReminder(context),
+                                )
+                            }
                             scheduler.scheduleNext(context, ReminderScheduler.Kind.WeighIn, settings.reminderTime)
                         }
                     }
