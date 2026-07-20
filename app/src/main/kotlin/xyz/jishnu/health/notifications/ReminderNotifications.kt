@@ -28,6 +28,11 @@ object ReminderNotifications {
             .setContentText("Begin your fasting window now to stay on track.")
             .setAutoCancel(true)
             .setContentIntent(openAppPending(context, requestCode = 1001, route = null))
+            .addAction(
+                R.drawable.ic_notif_fast,
+                "Start fast",
+                startFastPending(context),
+            )
             .build()
 
     fun buildWeighInReminder(context: Context): Notification =
@@ -125,6 +130,19 @@ object ReminderNotifications {
                 units = units,
                 windowIndex = windowIndex,
             ),
+        )
+    }
+
+    private fun startFastPending(context: Context): PendingIntent {
+        val intent = NotificationActionReceiver.intent(
+            context,
+            NotificationActionReceiver.ACTION_START_FAST,
+        )
+        return PendingIntent.getBroadcast(
+            context,
+            1005,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 
