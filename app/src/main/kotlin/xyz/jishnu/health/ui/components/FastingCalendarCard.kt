@@ -1,22 +1,28 @@
 package xyz.jishnu.health.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,14 +35,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import xyz.jishnu.health.domain.CalendarDay
 import xyz.jishnu.health.domain.FastingCalendar
 import xyz.jishnu.health.ui.theme.IntermTheme
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /** Level 0..4 intensity ramp, tuned per theme (index = CalendarDay.level). */
 @Composable
@@ -63,6 +70,8 @@ fun FastingCalendarCard(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val scroll = rememberScrollState()
+    // The day whose details are shown below the grid; tapping a cell selects it.
+    var selected by remember(calendar.weeks.size) { mutableStateOf<CalendarDay?>(null) }
 
     // Fixed cell geometry (dp).
     val cell = 13.dp
@@ -126,12 +135,12 @@ fun FastingCalendarCard(
                                 detectTapGestures { tap ->
                                     val strideP = rowStride.toPx()
                                     val top = monthH.toPx()
-                                    if (tap.y < top) return@detectTapGestures
+                                    if (tap.y < top) { selected = null; return@detectTapGestures }
                                     val col = (tap.x / strideP).toInt()
                                     val row = ((tap.y - top) / strideP).toInt()
-                                    if (col in calendar.weeks.indices && row in 0..6) {
-                                        calendar.weeks[col][row]?.let { onDayClick(it.dayKey) }
-                                    }
+                                    // Selecting a day shows its details below the grid; a
+                                    // tap on empty/padding clears the selection.
+                                    selected = calendar.weeks.getOrNull(col)?.getOrNull(row)
                                 }
                             },
                     ) {
@@ -169,31 +178,58 @@ fun FastingCalendarCard(
                                         style = Stroke(width = with(density) { 1.5.dp.toPx() }),
                                     )
                                 }
+                                if (day.dayKey == selected?.dayKey) {
+                                    drawRoundRect(
+                                        color = c.ink2,
+                                        topLeft = Offset(x, y),
+                                        size = Size(cellP, cellP),
+                                        cornerRadius = CornerRadius(radius, radius),
+                                        style = Stroke(width = with(density) { 1.5.dp.toPx() }),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Less", style = IntermTheme.typography.caption, color = c.muted)
-                Spacer(Modifier.width(6.dp))
-                ramp.forEach { color ->
-                    Box(
+            Spacer(Modifier.height(14.dp))
+            val sel = selected
+            if (sel == null) {
+                Text(
+                    "Tap a day for details",
+                    style = IntermTheme.typography.caption,
+                    color = c.muted,
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            sel.date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())),
+                            style = IntermTheme.typography.caption,
+                            color = c.muted,
+                        )
+                        Text(
+                            calendarDayStatus(sel),
+                            style = IntermTheme.typography.body.copy(fontWeight = FontWeight.W600),
+                            color = c.ink,
+                        )
+                    }
+                    Text(
+                        "View day",
+                        style = IntermTheme.typography.caption.copy(fontWeight = FontWeight.W600),
+                        color = c.primary2,
                         modifier = Modifier
-                            .padding(horizontal = 2.dp)
-                            .size(12.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(color),
+                            .clip(RoundedCornerShape(999.dp))
+                            .clickable { onDayClick(sel.dayKey) }
+                            .background(c.primarySoft)
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
                     )
                 }
-                Spacer(Modifier.width(6.dp))
-                Text("More", style = IntermTheme.typography.caption, color = c.muted)
             }
         }
     }
@@ -201,6 +237,19 @@ fun FastingCalendarCard(
     // Open scrolled to the most recent weeks.
     LaunchedEffect(calendar.weeks.size, scroll.maxValue) {
         if (scroll.maxValue > 0) scroll.scrollTo(scroll.maxValue)
+    }
+}
+
+/** Human-readable summary of a day's fast for the tap detail row. */
+private fun calendarDayStatus(day: CalendarDay): String {
+    if (day.level == 0 || day.fastHours <= 0.0) return "No fast logged"
+    val h = day.fastHours.toInt()
+    val m = ((day.fastHours - h) * 60).toInt()
+    val duration = "${h}h ${m.toString().padStart(2, '0')}m"
+    return when (day.level) {
+        4 -> "$duration · Exceeded goal"
+        3 -> "$duration · Goal met"
+        else -> duration
     }
 }
 
