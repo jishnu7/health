@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import xyz.jishnu.health.data.constants.Plans
 import xyz.jishnu.health.data.model.DayEntries
+import xyz.jishnu.health.domain.FastingCalendar
+import xyz.jishnu.health.domain.FastingCalendarBuilder
 import xyz.jishnu.health.data.model.DayEntry
 import xyz.jishnu.health.data.model.Plan
 import xyz.jishnu.health.data.model.RangeOption
@@ -34,6 +36,7 @@ data class ProgressUiState(
     val streakDays: Int = 0,
     val daysGoalMet: Int = 0,
     val dayCount: Int = 0,
+    val calendar: FastingCalendar = FastingCalendar.EMPTY,
 )
 
 @HiltViewModel
@@ -73,6 +76,12 @@ class ProgressViewModel @Inject constructor(
         val streak = computeStreak(fastingDays, plan.fastHours)
         val daysGoalMet = fastingDays.count { it.fastHours >= plan.fastHours }
         val avgFast = if (fastingDays.isEmpty()) 0.0 else fastingDays.sumOf { it.fastHours } / fastingDays.size
+        val calendar = FastingCalendarBuilder.build(
+            sessions = sessions,
+            goalHours = plan.fastHours,
+            today = today,
+            zone = zone,
+        )
 
         ProgressUiState(
             range = range,
@@ -86,6 +95,7 @@ class ProgressViewModel @Inject constructor(
             streakDays = streak,
             daysGoalMet = daysGoalMet,
             dayCount = merged.size,
+            calendar = calendar,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 

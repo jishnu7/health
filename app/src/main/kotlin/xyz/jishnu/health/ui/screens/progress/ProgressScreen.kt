@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import xyz.jishnu.health.data.model.RangeOption
 import xyz.jishnu.health.domain.WeightMath
 import xyz.jishnu.health.ui.components.BottomNav
+import xyz.jishnu.health.ui.components.FastingCalendarCard
 import xyz.jishnu.health.ui.components.HistoryRow
 import xyz.jishnu.health.ui.components.IntermCard
 import xyz.jishnu.health.ui.components.IntermIcons
@@ -103,6 +104,13 @@ fun ProgressScreen(
                     Spacer(Modifier.height(8.dp))
                     FastChart(entries = state.entries, units = state.units, goalHours = state.plan.fastHours)
                 }
+
+                Spacer(Modifier.height(14.dp))
+                FastingCalendarCard(
+                    calendar = state.calendar,
+                    onDayClick = { dayKey -> onOpenDay(dayKey, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 Spacer(Modifier.height(14.dp))
                 SummaryGrid(state)
