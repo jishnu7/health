@@ -52,6 +52,8 @@ class FastingCalendarTest {
     @Test fun `days after today are padding nulls`() {
         val today = LocalDate.of(2026, 7, 22) // a Wednesday
         val cal = FastingCalendarBuilder.build(emptyList(), 16, today, utc)
+        // Grid still aligns to Monday even when today is mid-week.
+        assertEquals(DayOfWeek.MONDAY, cal.weeks.first()[0]!!.date.dayOfWeek)
         val lastCol = cal.weeks.last()
         // Wed = index 2 (Mon=0); Thu..Sun should be null padding
         assertNotNull(lastCol[2])
