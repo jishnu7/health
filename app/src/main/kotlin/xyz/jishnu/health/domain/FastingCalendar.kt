@@ -2,10 +2,8 @@ package xyz.jishnu.health.domain
 
 import xyz.jishnu.health.data.local.FastingSessionEntity
 import xyz.jishnu.health.data.model.DayEntries
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 /** One day's cell. [level] is 0 (no fast) .. 4 (goal met). */
 data class CalendarDay(
@@ -53,9 +51,6 @@ object FastingCalendarBuilder {
         }
     }
 
-    private fun isoWeekStart(date: LocalDate): LocalDate =
-        date.minus(((date.dayOfWeek.value - DayOfWeek.MONDAY.value) + 7) % 7L, ChronoUnit.DAYS)
-
     fun build(
         sessions: List<FastingSessionEntity>,
         goalHours: Int,
@@ -68,7 +63,7 @@ object FastingCalendarBuilder {
         val hoursByKey: Map<Long, Double> = DayEntries.merge(sessions, emptyList(), zone, nowMs)
             .associate { it.dayKey to it.fastHours }
 
-        val start = isoWeekStart(today.minusWeeks(weeksBack.toLong()))
+        val start = WeightTrend.isoWeekStart(today.minusWeeks(weeksBack.toLong()))
         val weeks = mutableListOf<List<CalendarDay?>>()
         val monthLabels = mutableListOf<MonthLabel>()
         var cursor = start
