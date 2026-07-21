@@ -45,16 +45,16 @@ import xyz.jishnu.health.ui.theme.IntermTheme
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** Level 0..4 intensity ramp, tuned per theme (index = CalendarDay.level). */
+/** Level 0..3 intensity ramp, tuned per theme (index = CalendarDay.level). */
 @Composable
 fun calendarLevelColors(): List<Color> =
     if (IntermTheme.colors.isDark) {
         listOf(
-            Color(0xFF2A2822), Color(0xFF2C4A3B), Color(0xFF35604D), Color(0xFF4E9576), Color(0xFF7DD3A8),
+            Color(0xFF2A2822), Color(0xFF35604D), Color(0xFF4E9576), Color(0xFF7DD3A8),
         )
     } else {
         listOf(
-            Color(0xFFEAE6DB), Color(0xFFCBDDCF), Color(0xFF97BEA5), Color(0xFF598872), Color(0xFF2A4D3E),
+            Color(0xFFEAE6DB), Color(0xFF97BEA5), Color(0xFF598872), Color(0xFF2A4D3E),
         )
     }
 
@@ -242,14 +242,14 @@ fun FastingCalendarCard(
 
 /** Human-readable summary of a day's fast for the tap detail row. */
 private fun calendarDayStatus(day: CalendarDay): String {
-    if (day.level == 0 || day.fastHours <= 0.0) return "No fast logged"
+    if (day.fastHours <= 0.0) return "No fast logged"
     val h = day.fastHours.toInt()
     val m = ((day.fastHours - h) * 60).toInt()
     val duration = "${h}h ${m.toString().padStart(2, '0')}m"
     return when (day.level) {
-        4 -> "$duration · Exceeded goal"
-        3 -> "$duration · Goal met"
-        else -> duration
+        3 -> "$duration · Exceeded goal"
+        2 -> "$duration · Goal met"
+        else -> duration // level 0 (under 12h) or 1 (short) — just the duration
     }
 }
 

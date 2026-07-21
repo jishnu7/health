@@ -5,7 +5,7 @@ import xyz.jishnu.health.data.model.DayEntries
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** One day's cell. [level]: 0 no fast, 1 short, 2 under goal, 3 goal met, 4 exceeded goal. */
+/** One day's cell. [level]: 0 nothing (no fast or under 12h), 1 short, 2 goal met, 3 exceeded goal. */
 data class CalendarDay(
     val dayKey: Long,
     val date: LocalDate,
@@ -40,19 +40,22 @@ object FastingCalendarBuilder {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     )
 
+    /** A fast shorter than this (hours) doesn't register on the calendar. */
+    const val MIN_FAST_HOURS = 12.0
+
     /**
-     * Cell intensity: 0 no fast; 1 short (<half goal); 2 under goal; 3 goal met
-     * ([goal, goal+1h)); 4 exceeded (>= goal + 1h). Met and exceeded are split so
-     * a long fast reads darker than one that just reached the goal.
+     * Cell intensity: 0 nothing (no fast, or under [MIN_FAST_HOURS]); 1 short
+     * (>= 12h but under goal); 2 goal met ([goal, goal+1h)); 3 exceeded
+     * (>= goal + 1h). Met and exceeded are split so a long fast reads darker
+     * than one that just reached the goal.
      */
     fun level(fastHours: Double, goalHours: Int): Int {
-        if (fastHours <= 0.0) return 0
-        if (goalHours <= 0) return 4
+        if (fastHours < MIN_FAST_HOURS) return 0
+        if (goalHours <= 0) return 3
         val goal = goalHours.toDouble()
         return when {
-            fastHours >= goal + 1.0 -> 4
-            fastHours >= goal -> 3
-            fastHours >= goal * 0.5 -> 2
+            fastHours >= goal + 1.0 -> 3
+            fastHours >= goal -> 2
             else -> 1
         }
     }
@@ -96,9 +99,10 @@ object FastingCalendarBuilder {
                 val hours = hoursByKey[dayKey] ?: 0.0
                 val lvl = level(hours, goalHours)
                 column.add(CalendarDay(dayKey, date, hours, lvl))
-                if (hours > 0.0) daysFasted++
+                // A day only counts as fasted once it clears the 12h floor (level >= 1).
+                if (lvl >= 1) daysFasted++
                 // Reaching the goal (met or exceeded) counts toward the stats.
-                if (lvl >= 3) {
+                if (lvl >= 2) {
                     goalMetDays++
                     streak++
                     longest = maxOf(longest, streak)

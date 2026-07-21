@@ -27,15 +27,19 @@ class FastingCalendarTest {
             planId = "16:8",
         )
 
-    @Test fun `level buckets short, under-goal, met and exceeded`() {
+    @Test fun `level applies a 12h floor then short, met, exceeded`() {
         assertEquals(0, FastingCalendarBuilder.level(0.0, 16))   // no fast
-        assertEquals(1, FastingCalendarBuilder.level(4.0, 16))   // under half
-        assertEquals(2, FastingCalendarBuilder.level(8.0, 16))   // half, still under goal
-        assertEquals(2, FastingCalendarBuilder.level(14.0, 16))  // under goal
-        assertEquals(3, FastingCalendarBuilder.level(16.0, 16))  // goal met
-        assertEquals(3, FastingCalendarBuilder.level(16.9, 16))  // met, under goal+1h
-        assertEquals(4, FastingCalendarBuilder.level(17.0, 16))  // exceeded (goal + 1h)
-        assertEquals(4, FastingCalendarBuilder.level(20.0, 16))  // well beyond goal
+        assertEquals(0, FastingCalendarBuilder.level(8.0, 16))   // under 12h -> not a fast
+        assertEquals(0, FastingCalendarBuilder.level(11.9, 16))  // just under the floor
+        assertEquals(1, FastingCalendarBuilder.level(12.0, 16))  // short (12h, under goal)
+        assertEquals(1, FastingCalendarBuilder.level(15.9, 16))  // still short
+        assertEquals(2, FastingCalendarBuilder.level(16.0, 16))  // goal met
+        assertEquals(2, FastingCalendarBuilder.level(16.9, 16))  // met, under goal+1h
+        assertEquals(3, FastingCalendarBuilder.level(17.0, 16))  // exceeded (goal + 1h)
+        assertEquals(3, FastingCalendarBuilder.level(20.0, 16))  // well beyond goal
+        // Floor holds for a lower plan too.
+        assertEquals(1, FastingCalendarBuilder.level(12.0, 14))  // short on a 14h goal
+        assertEquals(2, FastingCalendarBuilder.level(14.0, 14))  // met on a 14h goal
     }
 
     @Test fun `grid starts on Monday and ends at today`() {
@@ -63,15 +67,17 @@ class FastingCalendarTest {
         assertNull(lastCol[6])
     }
 
-    @Test fun `goal-met stats count both met and exceeded days`() {
+    @Test fun `stats respect the 12h floor and count met plus exceeded`() {
         val today = LocalDate.of(2026, 7, 20)
         val sessions = listOf(
-            session(1, 2026, 7, 20, 8, 16), // met (level 3)
-            session(2, 2026, 7, 19, 8, 16), // met (level 3)
-            session(3, 2026, 7, 18, 8, 18), // exceeded (level 4) -> streak of 3
-            session(4, 2026, 7, 16, 8, 10), // short, under goal (no streak)
+            session(1, 2026, 7, 20, 8, 16), // met (level 2)
+            session(2, 2026, 7, 19, 8, 16), // met (level 2)
+            session(3, 2026, 7, 18, 8, 18), // exceeded (level 3) -> streak of 3
+            session(4, 2026, 7, 16, 8, 13), // short but >= 12h (fasted, no streak)
+            session(5, 2026, 7, 15, 8, 8),  // under 12h -> not counted as fasted
         )
         val cal = FastingCalendarBuilder.build(sessions, 16, today, utc)
+        // Only 12h+ days count as fasted (the 8h day is excluded).
         assertEquals(4, cal.daysFasted)
         // Reaching the goal counts whether met or exceeded.
         assertEquals(3, cal.goalMetDays)
